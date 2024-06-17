@@ -1,0 +1,135 @@
+<!-- Add Asset Modal -->
+<div class="modal fade" id="addAssetModal" tabindex="-1" role="dialog" aria-labelledby="addAssetModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addAssetModalLabel">자산 추가</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{{ url_for('add_asset') }}" method="post">
+                <div class="modal-body">
+                    <label for="asset_type_id">자산을 선택하세요:</label>
+                    <select id="asset_type_id" name="asset_type_id" class="form-control">
+                        {% for asset_type in asset_types %}
+                        {% if asset_type.asset_class not in ['liabilities', 'other_liabilities'] %}
+                        <option value="{{ asset_type.id }}">{{ asset_type.name }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                    <br>
+                    <label for="nickname">별명:</label>
+                    <input type="text" name="nickname" id="nickname" class="form-control" required>
+                    <br>
+                    <label for="value">가치:</label>
+                    <input type="text" name="value" id="value" class="form-control" required oninput="formatCurrency(this)" onblur="parseCurrency(this)">
+                    <br>
+                    <label for="currency">통화:</label>
+                    <select name="currency" id="currency" class="form-control">
+                        <option value="KRW">KRW</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">추가</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Liability Modal -->
+<div class="modal fade" id="addLiabilityModal" tabindex="-1" role="dialog" aria-labelledby="addLiabilityModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addLiabilityModalLabel">부채 추가</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{{ url_for('add_liability') }}" method="post">
+                <div class="modal-body">
+                    <label for="liability_type_id">부채를 선택하세요:</label>
+                    <select id="liability_type_id" name="liability_type_id" class="form-control">
+                        {% for asset_type in asset_types %}
+                        {% if asset_type.asset_class in ['liabilities', 'other_liabilities'] %}
+                        <option value="{{ asset_type.id }}">{{ asset_type.name }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                    <br>
+                    <label for="nickname">별명:</label>
+                    <input type="text" name="nickname" id="nickname" class="form-control" required>
+                    <br>
+                    <label for="value">금액:</label>
+                    <input type="text" name="value" id="value" class="form-control" required oninput="formatCurrency(this)" onblur="parseCurrency(this)">
+                    <br>
+                    <label for="currency">통화:</label>
+                    <select name="currency" id="currency" class="form-control">
+                        <option value="KRW">KRW</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">추가</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function showAddAssetModal() {
+    $('#addAssetModal').modal('show');
+}
+
+function showAddLiabilityModal() {
+    $('#addLiabilityModal').modal('show');
+}
+
+function removeAsset(button, assetId) {
+    fetch(`/delete_asset/${assetId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const row = button.closest('tr');
+            row.parentNode.removeChild(row);
+            updateCharts();
+        } else {
+            alert('Error removing asset.');
+        }
+    })
+    .catch(error => console.error('Error removing asset:', error));
+}
+
+function removeLiability(button, liabilityId) {
+    fetch(`/delete_liability/${liabilityId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const row = button.closest('tr');
+            row.parentNode.removeChild(row);
+            updateCharts();
+        } else {
+            alert('Error removing liability.');
+        }
+    })
+    .catch(error => console.error('Error removing liability:', error));
+}
+</script>

@@ -1,0 +1,59 @@
+<div class="col-md-6">
+    <div class="asset-form">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>자산</h2>
+            <button type="button" class="btn btn-secondary" onclick="showAddAssetModal()">자산 추가</button>
+        </div>
+        <table class="table" id="assetsContainer">
+            <thead>
+                <tr>
+                    <th>카테고리</th>
+                    <th>이름</th>
+                    <th>성격</th>
+                    <th>금액</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asset in assets %}
+                <tr>
+                    <td data-nature="{{ asset.asset_type.nature }}">{{ asset.asset_type.name }}</td>
+                    <td>{{ asset.nickname }}</td>
+                    <td>{{ asset.asset_type.nature | asset_nature_ko }}</td>
+                    <td><input type="text" class="form-control" value="{{ asset.value|round|format_currency }}" onchange="updateAssetValue(this, {{ asset.id }})" oninput="formatCurrency(this)" onblur="parseCurrency(this)"></td>
+                    <td><button type="button" class="btn-icon" onclick="removeAsset(this, {{ asset.id }})"><span class="material-icons">remove_circle_outline</span></button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="liability-form">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>부채</h2>
+            <button type="button" class="btn btn-secondary" onclick="showAddLiabilityModal()">부채 추가</button>
+        </div>
+        <table class="table" id="liabilitiesContainer">
+            <thead>
+                <tr>
+                    <th>카테고리</th>
+                    <th>이름</th>
+                    <th>성격</th>
+                    <th>금액</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for liability in liabilities %}
+                <tr>
+                    <td data-nature="{{ liability.liability_type.nature }}">{{ liability.liability_type.name }}</td>
+                    <td>{{ liability.nickname }}</td>
+                    <td>{{ liability.liability_type.nature | asset_nature_ko }}</td>
+                    <td><input type="text" class="form-control" value="{{ liability.value|round|format_currency }}" onchange="updateLiabilityValue(this, {{ liability.id }})" oninput="formatCurrency(this)" onblur="parseCurrency(this)"></td>
+                    <td><button type="button" class="btn-icon" onclick="removeLiability(this, {{ liability.id }})"><span class="material-icons">remove_circle_outline</span></button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

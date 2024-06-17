@@ -1,0 +1,39 @@
+<!-- Sidebar -->
+<nav id="sidebarMenu" class="d-md-block sidebar">
+    <div class="sidebar-sticky">
+        <div>
+        <h1>
+            <img src="{{ url_for('static', filename='images/croc_logo.png') }}" alt="Logo" style="max-width: 100%;">
+        </h1>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link active" href="{{ url_for('dashboard') }}">
+                    Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('history') }}">
+                    History
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('retirement') }}">
+                    Retirement Calculator
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('economic_indicators') }}">
+                    Economic Indicators
+                </a>
+            </li>
+        </ul>
+    </div>
+        <div class="sidebar-footer">
+
+            <a style="font-size: 0.9rem;"> 이 앱이 마음에 드시나요? </a>
+            <button class="nav-link-coffee" onclick="window.location.href='https://buymeacoffee.com/heymoana'">Buy me a coffee ☕️ </button>
+            <a style="font-size: 0.9rem;"> 더 추가하고 싶은 기능이 있다면, </a>
+            <button class="nav-link-contact" onclick="window.location.href='mailto:heymoana321@gmail.com'">Contact Developer 💌</button>
+        </div>
+    </div>
+</nav>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <!-- head -->
+    {% include '_head.html' %}
+    {% block scripts %}
+        <script type="module" src="{{ url_for('static', filename='js/retirementChart.js') }}"></script>
+    {% endblock %}
+    <head>
+        <style>
+            .input-group-text {
+                width: 50px;
+                text-align: right;
+            }
+            .form-control {
+                text-align: right;
+            }
+            .column-left {
+                flex: 3;
+                padding: 10px;
+            }
+            .column-right {
+                flex: 5;
+                padding: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="app">
+            <div class="row">
+                <!-- Sidebar -->
+                {% include '_sidebar.html' %}
+                <main role="main" class="main col-md-8 px-4">
+                    <div class="login-bar d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-4 mb-4">
+                        <h1>은퇴 계산기</h1>
+                        <div>
+                            <a href="{{ url_for('logout') }}" class="btn btn-secondary logout-btn">로그아웃</a>
+                        </div>
+                    </div>
+
+                    <!-- Content Body -->
+                    <div class="container-fluid">
+                        <div class="retirecontent">
+                        <div class="row">
+                            <div class="column-left">
+                                {% include '_retire_calform.html' %}
+                            </div>
+                            <div class="column-right">
+                                <h2>결과</h2>
+                                <p id="resultText"></p>
+                                <div id="analysisText"></div>
+                                <div id="retirementChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+
+                <script type="module">
+                    import { formatNumber, calculateRetirement } from "{{ url_for('static', filename='js/retirementChart.js') }}";
+
+                    document.addEventListener('DOMContentLoaded', () => {
+                        calculateRetirement();
+                    });
+
+                    window.formatNumber = formatNumber;
+                </script>
+            </body>
+        </div>
+    </body>
+</html>

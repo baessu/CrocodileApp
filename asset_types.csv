@@ -1,0 +1,31 @@
+id,name,asset_class,nature,liquidity
+1,은행 계좌 잔고,cash_and_cash_equivalents,stability_asset,liquid
+2,현금,cash_and_cash_equivalents,stability_asset,liquid
+3,단기 금융 상품,cash_and_cash_equivalents,stability_asset,liquid
+4,주식,investment_assets,investment_asset,liquid
+5,채권,investment_assets,investment_asset,liquid
+6,펀드,investment_assets,investment_asset,liquid
+7,ETF,investment_assets,investment_asset,liquid
+8,암호화폐,investment_assets,investment_asset,liquid
+9,주거용 부동산,real_estate,real_estate_asset,illiquid
+10,상업용 부동산,real_estate,real_estate_asset,illiquid
+11,임대용 부동산,real_estate,real_estate_asset,illiquid
+12,기타 부동산 자산,real_estate,real_estate_asset,illiquid
+13,401(k),retirement_accounts,retirement_asset,illiquid
+14,IRA,retirement_accounts,retirement_asset,illiquid
+15,기타 연금 계좌,retirement_accounts,retirement_asset,illiquid
+16,생명 보험 해지 환급금,other_long_term_assets,other_asset,illiquid
+17,"예술품, 보석류 등",other_long_term_assets,other_asset,illiquid
+18,주택 담보 대출,liabilities,liability,illiquid
+19,자동차 대출,liabilities,liability,illiquid
+20,학자금 대출,liabilities,liability,illiquid
+21,신용 카드 잔액,liabilities,liability,liquid
+22,기타 개인 대출,liabilities,liability,illiquid
+23,금,commodities,investment_asset,liquid
+24,은,commodities,investment_asset,liquid
+25,미술품,collectibles,other_asset,illiquid
+26,골동품,collectibles,other_asset,illiquid
+27,저축성 보험,cash_and_cash_equivalents,stability_asset,liquid
+28,배당금,investment_assets,investment_asset,liquid
+29,기타 자산,other_assets,other_asset,illiquid
+30,기타 부채,other_liabilities,liability,illiquid

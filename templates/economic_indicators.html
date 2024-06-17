@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <!-- head -->
+    {% include '_head.html' %}
+    <style>
+        .container {
+            background-color: #F8F8F8;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 32px;
+            border-radius: 16px;
+        }
+        .grid-container {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+            grid-gap: 24px;
+        }
+        .grid-item {
+            padding: 32px;
+            background-color: #fff;
+            border-radius: 16px;
+        }
+        .container {
+            padding: 0px;
+        }
+    </style>
+    <body>
+        <div id="app">
+            <div class="row">
+                <!-- Sidebar -->
+                {% include '_sidebar.html' %}
+                <main role="main" class="main col-md-8 px-4">
+                    <div class="login-bar d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-4 mb-4">
+                        <h1>경제 지표</h1>
+                        <div>
+                            <a href="{{ url_for('logout') }}" class="btn btn-secondary logout-btn">로그아웃</a>
+                        </div>
+                    </div>
+                    <!-- Economic Indicators Body -->
+                    <div class="container">
+                        <div id="indicatorsContainer" class="grid-container">
+                            <div class="grid-item">
+                                <h2>NASDAQ and S&P 500</h2>
+                                <div id="chart-nasdaq-sp500"></div>
+                            </div>
+                            <div class="grid-item">
+                                <h2>KOSPI and KOSDAQ</h2>
+                                <div id="chart-kospi-kosdaq"></div>
+                            </div>
+                            <div class="grid-item">
+                                <h2>KOSPI Disparity Index</h2>
+                                <div id="chart-kospi-disparity"></div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+        <!-- Load JavaScript files at the end of the body to ensure the DOM is fully loaded -->
+        <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <script src="{{ url_for('static', filename='js/economicIndicators.js') }}"></script>
+    </body>
+</html>

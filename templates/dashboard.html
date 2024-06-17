@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <!-- head -->
+    {% include '_head.html' %}
+    <head>
+        <style>
+        .table thead th{
+            border-bottom: 1.5px solid #a2a2a5;
+        }
+        .table th{
+            border-bottom: 1px solid #a2a2a5;
+        }
+        .table td, .table th {
+            padding: .75rem;
+            vertical-align: center;
+            border-top: 1.5px solid #e0e0e6;
+        }
+        
+    </style>
+    </head>
+    <body>
+        <div id="app">
+            <div class="row">
+                <!-- Sidebar -->
+                {% include '_sidebar.html' %}
+
+                <!-- Content -->
+                <main role="main" class="main col-md-8 px-4">
+                    <div class="login-bar d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-4 mb-4">
+                        <h1>내 자산 대시보드</h1>
+                        <div>
+                            <button class="btn btn-primary " id="snapshot-btn">Snapshot 찍기</button>
+                            <a href="{{ url_for('logout') }}" class="btn btn-secondary logout-btn">로그아웃</a>
+                        </div>
+                    </div>
+
+                    <!-- Content Body -->
+                    <div class="container-fluid">
+                        <div class="row content-row">
+                            <!-- Asset and Liability List -->
+                            {% include '_asset_liability_list.html' %}
+                            <!-- Net worth -->
+                            {% include '_net_worth.html' %}
+                        </div>
+                    </div>
+                </main>
+            </div>
+
+            <!-- Modals -->
+            {% include '_modals.html' %}
+
+            <!-- Load JavaScript files at the end of the body to ensure the DOM is fully loaded -->
+            <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+
+            <script type="module">
+                import { createCharts, updateCharts } from "{{ url_for('static', filename='js/chartConfig.js') }}";
+                import { initializeSortable } from "{{ url_for('static', filename='js/app.js') }}";
+
+                document.addEventListener('DOMContentLoaded', () => {
+                    createCharts();
+                    fetch('{{ url_for("asset_data") }}')
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Fetched data:', data); // 디버깅을 위해 추가
+                            updateCharts(data);
+                        })
+                        .catch(error => console.error('Error fetching asset data:', error));
+
+                    initializeSortable(); // 드래그 앤 드롭 초기화
+                });
+
+                document.getElementById('snapshot-btn').addEventListener('click', () => {
+                    fetch('{{ url_for("snapshot") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ date: new Date().toISOString() })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Snapshot successfully taken.');
+                        } else {
+                            alert('Error taking snapshot.');
+                        }
+                    })
+                    .catch(error => console.error('Error taking snapshot:', error));
+                });
+
+                function formatCurrency(input) {
+                    const value = input.value.replace(/\D/g, '');
+                    input.value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                }
+
+                function parseCurrency(input) {
+                    input.value = parseFloat(input.value.replace(/,/g, '')).toLocaleString();
+                }
+
+                function updateAssetValue(input, assetId) {
+                    const value = parseFloat(input.value.replace(/,/g, '')) || 0;
+                    fetch(`/update_asset/${assetId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ value: value })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateCharts();
+                        } else {
+                            alert('Error updating asset value');
+                        }
+                    })
+                    .catch(error => console.error('Error updating asset value:', error));
+                }
+
+                function removeAsset(element, assetId) {
+                    fetch(`/delete_asset/${assetId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            // Remove the asset row from the table
+                            const row = element.closest('tr');
+                            row.parentNode.removeChild(row);
+                            updateCharts();
+                        } else {
+                            alert('Error deleting asset');
+                        }
+                    })
+                    .catch(error => console.error('Error deleting asset:', error));
+                }
+
+                function removeLiability(element, liabilityId) {
+                    fetch(`/delete_liability/${liabilityId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            // Remove the liability row from the table
+                            const row = element.closest('tr');
+                            row.parentNode.removeChild(row);
+                            updateCharts();
+                        } else {
+                            alert('Error deleting liability');
+                        }
+                    })
+                    .catch(error => console.error('Error deleting liability:', error));
+                }
+
+                window.formatCurrency = formatCurrency;
+                window.parseCurrency = parseCurrency;
+                window.updateAssetValue = updateAssetValue;
+                window.removeAsset = removeAsset;
+                window.removeLiability = removeLiability;
+            </script>
+        </div>
+    </body>
+</html>

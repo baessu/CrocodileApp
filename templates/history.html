@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <!-- head -->
+    {% include '_head.html' %}
+    <body>
+        <div id="app">
+            <div class="row">
+                <!-- Sidebar -->
+                {% include '_sidebar.html' %}
+                <!-- Content -->
+                <main role="main" class="main col-md-8 px-4">
+                    <div class="login-bar d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-4 mb-4">
+                        <h1>자산 히스토리</h1>
+                        <div>
+                            <a href="{{ url_for('logout') }}" class="btn btn-secondary logout-btn">로그아웃</a>
+                        </div>
+                    </div>
+                
+
+                    <!-- Snapshot History Body -->
+                    <div class="container-fluid">
+                        <div class="historycontent">
+                            <div id="historyChart" style="height: 400px;"></div>
+                                <table class="table mt-6">
+                                    <thead>
+                                        <tr>
+                                            <th>날짜</th>
+                                            <th>총 자산</th>
+                                            <th>총 부채</th>
+                                            <th>순자산</th>
+                                            <th>삭제</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for snapshot in snapshots %}
+                                        <tr id="snapshot-{{ snapshot.id }}" onclick="toggleDetails('{{ snapshot.id }}')">
+                                            <td>{{ snapshot.date }}</td>
+                                            <td>{{ snapshot.total_assets | format_currency }}</td>
+                                            <td>{{ snapshot.total_liabilities | format_currency }}</td>
+                                            <td>{{ snapshot.net_worth | format_currency }}</td>
+                                            <td>
+                                                <button class="btn btn-danger" onclick="deleteSnapshot('{{ snapshot.id }}')">삭제</button>
+                                            </td>
+                                        </tr>
+                                        <tr id="details-{{ snapshot.id }}" class="details-row" style="display: none;">
+                                            <td colspan="5">
+                                                <div class="asset-details">
+                                                    <h5>자산 내역</h5>
+                                                    <ul class="asset-list"></ul>
+                                                    <h5>부채 내역</h5>
+                                                    <ul class="liability-list"></ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <!-- Load JavaScript files at the end of the body to ensure the DOM is fully loaded -->
+        <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const snapshots = {{ snapshots|tojson }};
+                
+                const dates = snapshots.map(snapshot => snapshot.date);
+                const totalAssets = snapshots.map(snapshot => snapshot.total_assets);
+                const totalLiabilities = snapshots.map(snapshot => snapshot.total_liabilities);
+                const netWorth = snapshots.map(snapshot => snapshot.net_worth);
+
+                const options = {
+                    chart: {
+                        type: 'line',
+                        height: 400
+                    },
+                    series: [
+                        {
+                            name: '총 자산',
+                            data: totalAssets
+                        },
+                        {
+                            name: '총 부채',
+                            data: totalLiabilities
+                        },
+                        {
+                            name: '순자산',
+                            data: netWorth
+                        }
+                    ],
+                    xaxis: {
+                        categories: dates,
+                        title: {
+                            text: '날짜'
+                        }
+                    },
+                    yaxis: {
+                        title: {
+                            text: '금액 (원)'
+                        },
+                        labels: {
+                            formatter: function (value) {
+                                return value.toLocaleString();
+                            }
+                        }
+                    },
+                    tooltip: {
+                        y: {
+                            formatter: function (value) {
+                                return value.toLocaleString() + ' 원';
+                            }
+                        }
+                    }
+                };
+
+                const chart = new ApexCharts(document.querySelector("#historyChart"), options);
+                chart.render();
+            });
+
+            function deleteSnapshot(snapshotId) {
+                console.log('Deleting snapshot with ID:', snapshotId); // 디버깅을 위해 추가
+
+                if (confirm('정말 이 스냅샷을 삭제하시겠습니까?')) {
+                    fetch(`/delete_snapshot/${snapshotId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById(`snapshot-${snapshotId}`).remove();
+                            document.getElementById(`details-${snapshotId}`).remove();
+                        } else {
+                            alert('스냅샷 삭제에 실패했습니다.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('스냅샷 삭제 중 오류 발생:', error);
+                        alert('스냅샷 삭제 중 오류 발생.');
+                    });
+                }
+            }
+
+            function toggleDetails(snapshotId) {
+                const detailsRow = document.getElementById(`details-${snapshotId}`);
+                if (detailsRow.style.display === 'none') {
+                    fetch(`/snapshot_details/${snapshotId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Fetched data:', data); // 디버깅을 위해 추가
+
+                            const assetList = detailsRow.querySelector('.asset-list');
+                            const liabilityList = detailsRow.querySelector('.liability-list');
+
+                            assetList.innerHTML = '';
+                            liabilityList.innerHTML = '';
+
+                            if (Array.isArray(data.assets)) {
+                                data.assets.forEach(asset => {
+                                    const li = document.createElement('li');
+                                    li.textContent = `${asset.type}: ${asset.name} - ${asset.value.toLocaleString()} 원`;
+                                    assetList.appendChild(li);
+                                });
+                            } else {
+                                console.error('Invalid data format for assets:', data.assets);
+                            }
+
+                            if (Array.isArray(data.liabilities)) {
+                                data.liabilities.forEach(liability => {
+                                    const li = document.createElement('li');
+                                    li.textContent = `${liability.type}: ${liability.name} - ${liability.value.toLocaleString()} 원`;
+                                    liabilityList.appendChild(li);
+                                });
+                            } else {
+                                console.error('Invalid data format for liabilities:', data.liabilities);
+                            }
+
+                            detailsRow.style.display = '';
+                        })
+                        .catch(error => {
+                            console.error('자산 내역 로드 중 오류 발생:', error);
+                            alert('자산 내역 로드 중 오류 발생.');
+                        });
+                } else {
+                    detailsRow.style.display = 'none';
+                }
+            }
+
+            window.deleteSnapshot = deleteSnapshot;
+            window.toggleDetails = toggleDetails;
+        </script>
+    </body>
+</html>
