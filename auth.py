@@ -1,10 +1,16 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import login_user, logout_user, login_required, current_user
-from models import User, db, UserAsset, UserLiability
-import secrets
+from flask_login import login_user, logout_user, login_required
+from models import User
+from supabase import create_client, Client
+import os
 
 auth = Blueprint('auth', __name__)
+
+# Load environment variables
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+supabase = create_client(supabase_url, supabase_key)
 
 def add_placeholder_assets_and_liabilities(user_id):
     placeholder_assets = [
@@ -13,17 +19,13 @@ def add_placeholder_assets_and_liabilities(user_id):
         {"nickname": "OO아파트", "asset_type_id": 9, "value": 100000000, "currency": "KRW"},
     ]
     for asset in placeholder_assets:
-        new_asset = UserAsset(user_id=user_id, **asset)
-        db.session.add(new_asset)
+        supabase.table('user_asset').insert({"user_id": user_id, **asset}).execute()
     
     placeholder_liabilities = [
         {"nickname": "OO전세대출", "liability_type_id": 30, "value": 50000000, "currency": "KRW"},
     ]
     for liability in placeholder_liabilities:
-        new_liability = UserLiability(user_id=user_id, **liability)
-        db.session.add(new_liability)
-    
-    db.session.commit()
+        supabase.table('user_liability').insert({"user_id": user_id, **liability}).execute()
 
 @auth.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -32,21 +34,21 @@ def signup():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        user = User.query.filter_by(email=email).first()
-        if user:
-            flash('Email address already exists')
+        response = supabase.table('user').select('*').eq('email', email).execute()
+        if response.data:
+            flash('Email address already exists', 'error')
             return redirect(url_for('auth.signup'))
 
-        new_user = User(email=email, username=username, password=generate_password_hash(password, method='pbkdf2:sha256'))
-        db.session.add(new_user)
-        db.session.commit()
-        
-        add_placeholder_assets_and_liabilities(new_user.id)  # Add placeholder assets and liabilities after user creation
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+        user = User.create_user(email, username, hashed_password)
 
-        login_user(new_user)
-        return redirect(url_for('dashboard'))
+        if user:
+            add_placeholder_assets_and_liabilities(user.id)
+            login_user(user)
+            return redirect(url_for('dashboard'))
 
     return render_template('signup.html')
+
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
@@ -54,11 +56,14 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
 
-        user = User.query.filter_by(email=email).first()
-        if not user or not check_password_hash(user.password, password):
-            flash('Please check your login details and try again.')
+        response = supabase.table('user').select('*').eq('email', email).execute()
+        user_data = response.data[0] if response.data else None
+
+        if not user_data or not check_password_hash(user_data['password'], password):
+            flash('Please check your login details and try again.','error')
             return redirect(url_for('auth.login'))
 
+        user = User(user_data)
         login_user(user)
         return redirect(url_for('dashboard'))
 

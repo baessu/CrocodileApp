@@ -39,5 +39,15 @@
             <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary">회원가입</a>
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const alertContainer = document.getElementById('alert-container');
+            if (alertContainer) {
+                setTimeout(function() {
+                    alertContainer.remove();
+                }, 5000); // 5 seconds timeout
+            }
+        });
+    </script>
 </body>
 </html>
