@@ -8,3 +8,4 @@ Requests==2.32.3
 SQLAlchemy==2.0.30
 Werkzeug==3.0.3
 yfinance==0.2.40
+gunicorn
