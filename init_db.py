@@ -1,4 +1,4 @@
-from main import db, app
+from app import db, app
 from models import User, AssetType, UserAsset, UserLiability
 import csv
 
