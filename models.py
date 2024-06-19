@@ -2,7 +2,9 @@ from flask_login import UserMixin
 from datetime import datetime
 from supabase import create_client
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 # Load environment variables
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")

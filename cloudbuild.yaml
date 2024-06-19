@@ -1,8 +1,14 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+  pool: {}
+projectId: asset-dashboard-426812
 steps:
-  - name: 'gcr.io/cloud-builders/gcloud'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        gcloud config set project $PROJECT_ID
-        gcloud app deploy app.yaml --quiet
+- name: gcr.io/k8s-skaffold/pack
+  entrypoint: pack
+  args:
+  - build
+  - asia-northeast3-docker.pkg.dev/asset-dashboard-426812/buildpacks-docker-repo/crocodile-app
+  - --builder
+  - gcr.io/buildpacks/builder:latest
+  - --network
+  - cloudbuild
