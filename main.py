@@ -17,12 +17,14 @@ from supabase import create_client, Client
 from models import User
 
 
+
 load_dotenv()
 app = Flask(__name__)
 #db = SQLAlchemy()
 
 # 안전한 SECRET_KEY 생성 및 설정
 app.config['SECRET_KEY'] = secrets.token_hex(24)
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=1)  # 세션 유지 시간을 7일로 설정
 #app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 # app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -74,6 +76,8 @@ def asset_nature_ko(nature):
 
 @app.route('/')
 def index():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
     return render_template('index.html')
 
 @app.route('/dashboard')
@@ -500,4 +504,4 @@ def api_economic_indicators():
 
 if __name__ == '__main__':
     #app.run(debug=True)
-    app.run(host='0.0.0.0', port=5000)
+    app.run(port=8080)

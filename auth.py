@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required
 from models import User
+
 from supabase import create_client, Client
 import os
 
@@ -64,7 +65,7 @@ def login():
             return redirect(url_for('auth.login'))
 
         user = User(user_data)
-        login_user(user)
+        login_user(user, remember=True)  # 세션을 기억하도록 설정
         return redirect(url_for('dashboard'))
 
     return render_template('index.html')

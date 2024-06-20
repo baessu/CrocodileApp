@@ -1,21 +1,10 @@
-runtime: python39
-entrypoint: gunicorn -b :$PORT main:app
+runtime: python38
 
 instance_class: F2
 
-
-handlers:
-# Matches requests to /images/... to files in static/images/...
-- url: /images
-  static_dir: static/images
-
-- url: /.*
-  secure: always
-  redirect_http_response_code: 301
-  script: auto
-
-error_handlers:
-  - file: default_error.html
-
-  - error_code: over_quota
-    file: over_quota.html
+env_variables:
+  # 환경 변수 설정 (필요한 경우)
+  FRED_API_KEY: 'c3f67d6fc239b6265290b5e51add2a18'
+  SUPABASE_URL: 'https://hptsjlzmchuwdxcqlkib.supabase.co'
+  SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwdHNqbHptY2h1d2R4Y3Fsa2liIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTg2MzM1ODYsImV4cCI6MjAzNDIwOTU4Nn0.e7uGhH-s4WwbrgMbfYp3imsBv5mlu3Fn9DYVL5aRvjg'
+  DATABASE_URL: 'postgres://postgres.hptsjlzmchuwdxcqlkib:WkfzfiBYE2CXa5e7@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres'
