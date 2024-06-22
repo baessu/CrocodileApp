@@ -1,4 +1,3 @@
-import csv
 import secrets
 import yfinance as yf
 import xml.etree.ElementTree as ET
@@ -15,7 +14,33 @@ from dotenv import load_dotenv
 import os
 from supabase import create_client, Client
 from models import User
+import googlecloudprofiler
 
+def initialize_profiler():
+    """
+    Google Cloud Profiler를 초기화합니다.
+    """
+    try:
+        googlecloudprofiler.start(
+            service="hello-profiler",  # 프로파일러에서 사용할 서비스 이름
+            service_version="1.0.1",  # 애플리케이션 버전
+            verbose=3,  # 로깅 수준 (0-오류, 1-경고, 2-정보, 3-디버그)
+            # GCP에서 실행되지 않는 경우 프로젝트 ID 지정
+            # project_id='my-project-id',
+        )
+    except (ValueError, NotImplementedError) as exc:
+        print(f"프로파일러 초기화 오류: {exc}")  # 초기화 오류 처리
+
+def main():
+    """
+    애플리케이션의 메인 진입점입니다.
+    """
+    initialize_profiler()
+    # 여기에서 애플리케이션의 나머지 초기화를 수행합니다.
+    # 예: 데이터베이스 연결, 로깅 설정, 기타 서비스 초기화 등
+
+    # 애플리케이션의 주요 로직 실행
+    print("애플리케이션이 시작되었습니다.")
 
 
 load_dotenv()
@@ -503,5 +528,7 @@ def api_economic_indicators():
     return jsonify(data)
 
 if __name__ == '__main__':
-    #app.run(debug=True)
-    app.run(port=8080)
+    app.run(debug=True)
+    #app.run(port=8080)
+    
+    

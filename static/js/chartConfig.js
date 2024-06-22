@@ -101,9 +101,9 @@ export function updateCharts() {
     const totalLiabilities = liabilityValues.reduce((a, b) => a + b, 0).toLocaleString();
     const netWorth = (parseFloat(totalAssets.replace(/,/g, '')) - parseFloat(totalLiabilities.replace(/,/g, ''))).toLocaleString();
 
-    document.getElementById('total_assets').innerText = `총 자산: ${totalAssets}`;
-    document.getElementById('total_liabilities').innerText = `총 부채: ${totalLiabilities}`;
-    document.getElementById('net_worth').innerText = `순자산: ${netWorth}`;
+    document.getElementById('total_assets').innerText = `• 총 자산: ${totalAssets}`;
+    document.getElementById('total_liabilities').innerText = `• 총 부채: ${totalLiabilities}`;
+    document.getElementById('net_worth').innerText = `💰 순자산: ${netWorth}`;
 
     let investmentAssetsTotal = 0;
     let cashEquivalentsTotal = 0;
@@ -126,17 +126,17 @@ export function updateCharts() {
         }
     });
 
-    document.getElementById('investment_assets_total').innerText = `투자 자산 합: ${investmentAssetsTotal.toLocaleString()}`;
-    document.getElementById('cash_equivalents_total').innerText = `현금 및 현금성 자산 합: ${cashEquivalentsTotal.toLocaleString()}`;
-    document.getElementById('real_estate_total').innerText = `부동산 자산 합: ${realEstateTotal.toLocaleString()}`;
-    document.getElementById('retirement_accounts_total').innerText = `퇴직연금 및 연금 계좌 합: ${retirementAccountsTotal.toLocaleString()}`;
-    document.getElementById('other_long_term_assets_total').innerText = `기타 장기 자산 합: ${otherLongTermAssetsTotal.toLocaleString()}`;
+    document.getElementById('investment_assets_total').innerText = `• 투자 자산 합: ${investmentAssetsTotal.toLocaleString()}`;
+    document.getElementById('cash_equivalents_total').innerText = `• 현금 및 현금성 자산 합: ${cashEquivalentsTotal.toLocaleString()}`;
+    document.getElementById('real_estate_total').innerText = `• 부동산 자산 합: ${realEstateTotal.toLocaleString()}`;
+    document.getElementById('retirement_accounts_total').innerText = `• 퇴직연금 및 연금 계좌 합: ${retirementAccountsTotal.toLocaleString()}`;
+    document.getElementById('other_long_term_assets_total').innerText = `• 기타 장기 자산 합: ${otherLongTermAssetsTotal.toLocaleString()}`;
 
     const debtRatio = ((parseFloat(totalLiabilities.replace(/,/g, '')) / parseFloat(totalAssets.replace(/,/g, ''))) * 100).toFixed(2);
     const liquidityRatio = ((cashEquivalentsTotal / parseFloat(totalAssets.replace(/,/g, ''))) * 100).toFixed(2);
 
-    document.getElementById('debt_ratio').innerText = `부채 비율: ${debtRatio}%`;
-    document.getElementById('liquidity_ratio').innerText = `자산 대비 현금 비율: ${liquidityRatio}%`;
+    document.getElementById('debt_ratio').innerText = `• 부채 비율: ${debtRatio}%`;
+    document.getElementById('liquidity_ratio').innerText = `• 자산 대비 현금 비율: ${liquidityRatio}%`;
     
     const assetColors = assetLabels.map(label => colorMapping[label] || '#FF4500');
     const liabilityColors = liabilityLabels.map(label => colorMapping[label] || '#FF4500');

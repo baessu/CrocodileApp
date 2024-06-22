@@ -2,29 +2,16 @@
 <html lang="ko">
     <!-- head -->
     {% include '_head.html' %}
-    <style>
-        .container {
-            background-color: #F8F8F8;
-            max-width: 100%;
-            margin: 0 auto;
-            padding: 32px;
-            border-radius: 16px;
-        }
-        .grid-container {
-            width: 100%;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
-            grid-gap: 24px;
-        }
-        .grid-item {
-            padding: 32px;
-            background-color: #fff;
-            border-radius: 16px;
-        }
-        .container {
-            padding: 0px;
-        }
-    </style>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TC829VBX7Y"></script>
+        <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-TC829VBX7Y');
+    </script>
     <body>
         <div id="app">
             <div class="row">
@@ -41,16 +28,23 @@
                     <div class="container">
                         <div id="indicatorsContainer" class="grid-container">
                             <div class="grid-item">
-                                <h2>NASDAQ and S&P 500</h2>
-                                <div id="chart-nasdaq-sp500"></div>
+                                <h2 class="mb-3">NASDAQ and S&P 500</h2>
+                                <div class="result-item" id="index-nasdaq"></div>
+                                <div class="result-item" id="index-sp500"></div>
+                                <div class="mt-4" id="chart-nasdaq-sp500"></div>
                             </div>
                             <div class="grid-item">
-                                <h2>KOSPI and KOSDAQ</h2>
-                                <div id="chart-kospi-kosdaq"></div>
+                                <h2 class="mb-3" >KOSPI & KOSDAQ</h2>
+                                <div class="result-item" id="index-kospi"></div>
+                                <div class="result-item" id="index-kosdaq"></div>
+                                <div class="mt-4" id="chart-kospi-kosdaq"></div>
                             </div>
                             <div class="grid-item">
-                                <h2>KOSPI Disparity Index</h2>
-                                <div id="chart-kospi-disparity"></div>
+                                <h2 class="mb-3">KOSPI 이격도</h2>
+                                <div class="result-item" id="index-disparity-20"></div>
+                                <div class="result-item" id="index-disparity-60"></div>
+                                <div class="result-item" id="index-disparity-200"></div>
+                                <div class="mt-4" id="chart-kospi-disparity"></div>
                             </div>
                         </div>
                     </div>

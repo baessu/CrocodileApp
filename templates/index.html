@@ -12,10 +12,24 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 </head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TC829VBX7Y"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-TC829VBX7Y');
+</script>
+<style>
+    .container{
+        background-color: #ffffff;
+    }
+</style>
 <body>
     <div class="container mt-5" style="display: flex; flex-direction: column; align-items: center;">
         <div class="text-center mb-5">
-            <img src="{{ url_for('static', filename='images/croc_logo.png') }}" alt="Logo" style="max-width: 85%;">
+            <img src="{{ url_for('static', filename='images/croc_logo.png') }}" alt="Logo" style="width: 90%; max-width: 720px;">
             <h1 class="headline">💰 입벌린 악어 💰</h1>
         </div>
         
@@ -33,7 +47,7 @@
                 <button type="submit" class="btn btn-primary">로그인</button>
             </form>
         </div>
-        <div class="text-center">
+        <div class="text-center mb-5">
             <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary">회원가입</a>
         </div>
     </div>

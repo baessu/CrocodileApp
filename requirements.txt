@@ -12,3 +12,4 @@ Werkzeug==3.0.3
 yfinance==0.2.40
 supabase
 numpy
+google-cloud-profiler

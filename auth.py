@@ -66,6 +66,7 @@ def login():
 
         user = User(user_data)
         login_user(user, remember=True)  # 세션을 기억하도록 설정
+        login_user(user)
         return redirect(url_for('dashboard'))
 
     return render_template('index.html')

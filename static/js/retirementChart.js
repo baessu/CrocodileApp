@@ -19,8 +19,25 @@ export function calculateRetirement() {
     const yearsToRetirement = retirementAge - currentAge;
     const yearsInRetirement = lifeExpectancy - retirementAge;
 
+    function calculateFutureValue(pv, annualContrib, annualRate, years) {
+        const fvSavings = pv * Math.pow((1 + annualRate), years);
+        const fvContrib = annualContrib * (Math.pow((1 + annualRate), years) - 1) / annualRate;
+        return fvSavings + fvContrib;
+    }
+
+    function calculateRequiredSavings(annualExpense, annualRate, years) {
+        let presentValue = 0;
+        for (let i = 0; i < years; i++) {
+            presentValue += annualExpense / Math.pow((1 + annualRate), i);
+            annualExpense *= (1 + inflationRate / 100);
+        }
+        return presentValue;
+    }
+
+    const futureValue = calculateFutureValue(currentSavings, annualSavings, investmentReturn / 100, yearsToRetirement);
+    const requiredSavings = calculateRequiredSavings(retirementSpending, investmentReturn / 100, yearsInRetirement);
+
     let savings = currentSavings;
-    let requiredSavings = 0;
     let savingsHistory = [];
     let requiredSavingsHistory = [];
     let maxSavings = 0;
@@ -38,11 +55,15 @@ export function calculateRetirement() {
         }
 
         savings += savings * (investmentReturn / 100);
-        requiredSavings += annualExpenses;
-        savingsHistory.push(savings.toFixed(0));
-        requiredSavingsHistory.push(requiredSavings.toFixed(0));
-        annualSavingsHistory.push(age < retirementAge ? annualSavings.toFixed(0) : 0);
-        annualSpendingHistory.push(annualExpenses.toFixed(0));
+
+        savingsHistory.push(Math.floor(savings));
+        if (age >= retirementAge) {
+            requiredSavingsHistory.push(Math.floor(calculateRequiredSavings(retirementSpending, investmentReturn / 100, lifeExpectancy - age)));
+        } else {
+            requiredSavingsHistory.push(0);
+        }
+        annualSavingsHistory.push(age < retirementAge ? Math.floor(annualSavings) : 0);
+        annualSpendingHistory.push(Math.floor(annualExpenses));
 
         if (savings > maxSavings) {
             maxSavings = savings;
@@ -50,12 +71,12 @@ export function calculateRetirement() {
         }
     }
 
-    const retirementShortfall = requiredSavingsHistory[requiredSavingsHistory.length - 1] - savingsHistory[savingsHistory.length - 1];
+    const retirementShortfall = futureValue - requiredSavings;
 
     if (document.getElementById('resultText')) {
         document.getElementById('resultText').innerHTML = `
-            <p>최대 누적 자산: ${maxSavings.toLocaleString()} 원 (나이 ${maxSavingsAge}에 도달)</p>
-            <p>필요 자산과 예상 자산의 차이: ${retirementShortfall.toLocaleString()} 원</p>
+            <div>최대 누적 자산: ${Math.floor(maxSavings).toLocaleString()} 원 (나이 ${maxSavingsAge}에 도달)</div>
+            <div>필요 자산과 예상 자산의 차이: ${Math.abs(retirementShortfall).toLocaleString()} 원</div>
         `;
     }
 
@@ -80,14 +101,12 @@ export function calculateRetirement() {
             {
                 name: '연간 저축액',
                 type: 'column',
-                data: annualSavingsHistory,
-                yaxis: 1
+                data: annualSavingsHistory
             },
             {
                 name: '연간 생활비',
                 type: 'column',
-                data: annualSpendingHistory,
-                yaxis: 2
+                data: annualSpendingHistory
             }
         ],
         xaxis: {
@@ -108,32 +127,32 @@ export function calculateRetirement() {
                 title: {
                     text: '저축액 (원)'
                 },
+                serieseName: '예상 누적 자산',
                 labels: {
                     formatter: function (value) {
                         return value.toLocaleString();
                     }
                 },
                 min: 0,
-                max: maxValue
+                max: Math.max(...savingsHistory) * 1.2
             },
             {
-                opposite: true,
-                title: {
-                    text: '연간 저축액 (원)'
-                },
+                serieseName: '필요 누적 자산',
+                show: false,
                 labels: {
                     formatter: function (value) {
                         return value.toLocaleString();
                     }
                 },
                 min: 0,
-                max: Math.max(...annualSavingsHistory) * 1.2
+                max: Math.max(...savingsHistory) * 1.2
             },
             {
                 opposite: true,
                 title: {
-                    text: '연간 생활비 (원)'
+                    text: '연간 저축액 및 생활비 (원)'
                 },
+                serieseName: '연간 저축액',
                 labels: {
                     formatter: function (value) {
                         return value.toLocaleString();
@@ -141,6 +160,15 @@ export function calculateRetirement() {
                 },
                 min: 0,
                 max: Math.max(...annualSpendingHistory) * 1.2
+            },
+            {
+                serieseName: '연간 생활비',
+                show: false,
+                labels: {
+                    formatter: function (value) {
+                        return value.toLocaleString();
+                    }
+                },
             }
         ]
     };
@@ -157,21 +185,24 @@ export function calculateRetirement() {
     }
 
     let analysisText = `
-        <p>최대 누적 자산: ${maxSavings.toLocaleString()} 원 (나이 ${maxSavingsAge}에 도달)</p>
-        <p>필요 자산과 예상 자산의 차이: ${retirementShortfall.toLocaleString()} 원</p>
+        <div>• 최대 누적 자산:  ${Math.floor(maxSavings).toLocaleString()} 원 (나이 ${maxSavingsAge}에 도달)</div>
+        <div>• 필요 누적 자산:  ${Math.floor(requiredSavings).toLocaleString()} 원</div>
+        <div>• 필요 자산과 예상 자산의 차이:  ${Math.floor(retirementShortfall).toLocaleString()} 원</div>
+
     `;
 
-    if (retirementShortfall > 0) {
-        const additionalSavings = retirementShortfall / yearsToRetirement;
-        const requiredReturnRate = ((retirementShortfall / currentSavings) / yearsInRetirement) * 100;
-
+    if (retirementShortfall < 0) {
+        const additionalSavings = Math.floor(Math.abs(retirementShortfall) / yearsToRetirement);
+        const totalSavingsRequired = currentSavings + (annualSavings + additionalSavings) * yearsToRetirement;
+        const requiredReturnRate = (Math.pow(requiredSavings / totalSavingsRequired, 1 / yearsToRetirement) - 1) * 100;
+    
         analysisText += `
-            <p>목표를 달성하기 위해 연간 추가 저축액: ${additionalSavings.toLocaleString()} 원</p>
-            <p>필요한 투자 수익률: ${requiredReturnRate.toFixed(2)}%</p>
+            <div>• 목표를 달성하기 위해 연간 추가 저축액:  ${additionalSavings.toLocaleString()} 원</div>
+            <div>• 필요한 투자 수익률:  ${requiredReturnRate.toFixed(2)}%</div>
         `;
     } else {
         analysisText += `
-            <p>축하합니다! 현재 저축 계획과 투자 수익률로 은퇴 목표를 달성할 수 있습니다.</p>
+            <div><b>🎉 축하합니다! 현재 저축 계획과 투자 수익률로 은퇴 목표를 달성할 수 있습니다.</b></div>
         `;
     }
 
