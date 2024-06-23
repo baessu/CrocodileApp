@@ -39,6 +39,23 @@ const colorMapping = {
     '기타 부채': '#2C0069'
 };
 
+// Add this function to debounce the resize event
+function debounce(func, wait, immediate) {
+    let timeout;
+    return function() {
+        const context = this, args = arguments;
+        const later = function() {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+        };
+        const callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+    };
+}
+
+// Update your existing createCharts function to use the debounce function on resize
 export function createCharts() {
     const natureChartOptions = {
         chart: {
@@ -87,6 +104,12 @@ export function createCharts() {
 
     natureChart.render();
     assetChart.render();
+
+    // Debounce the resize event
+    window.addEventListener('resize', debounce(() => {
+        natureChart.render();
+        assetChart.render();
+    }, 250));
 }
 
 export function updateCharts() {

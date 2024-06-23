@@ -1,11 +1,15 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // 로컬 스토리지에서 'economicIndicators' 항목을 삭제
+    //localStorage.removeItem('economicIndicators');
     fetchEconomicIndicators();
 });
 
 function fetchEconomicIndicators() {
-    const cachedData = localStorage.getItem('economicIndicators');
-    if (cachedData) {
-        renderCharts(JSON.parse(cachedData));
+    const cachedData = JSON.parse(localStorage.getItem('economicIndicators'));
+    const now = new Date();
+
+    if (cachedData && (now - new Date(cachedData.timestamp)) < 60 * 60 * 1000) {
+        renderCharts(cachedData.data);
     } else {
         fetch('/api/economic_indicators')
             .then(response => {
@@ -15,14 +19,17 @@ function fetchEconomicIndicators() {
                 return response.json();
             })
             .then(data => {
-                localStorage.setItem('economicIndicators', JSON.stringify(data));
+                localStorage.setItem('economicIndicators', JSON.stringify({ timestamp: new Date(), data }));
                 renderCharts(data);
             })
             .catch(error => console.error('Error fetching economic indicators:', error));
     }
 }
-
 function renderCharts(data) {
+    if (!data || !data.dates) {
+        console.error('Data or dates not defined');
+        return;
+    }
     // 최근 30일 데이터 추출
     const recentDates = data.dates.slice(-30);
     const recentNasdaq = data.nasdaq.slice(-30);
@@ -32,6 +39,9 @@ function renderCharts(data) {
     const recentDisparity20 = data.kospi_disparity_20.slice(-30);
     const recentDisparity60 = data.kospi_disparity_60.slice(-30);
     const recentDisparity200 = data.kospi_disparity_200.slice(-30);
+    const recentKospiPbrValues = data.kospi_pbr_values
+    const recentKospiPbrDates = data.kospi_pbr_dates
+
 
     // 숫자를 K, M으로 축약하는 함수
     function formatNumber(value) {
@@ -244,6 +254,43 @@ function renderCharts(data) {
             renderIndexChange('index-disparity-20', recentDisparity20, 'Disparity 20');
             renderIndexChange('index-disparity-60', recentDisparity60, 'Disparity 60');
             renderIndexChange('index-disparity-200', recentDisparity200, 'Disparity 200');
+        });
+    }
+    // KOSPI PBR
+    if (recentKospiPbrValues.length && recentKospiPbrDates.length) {
+        const maxValue = Math.max(...recentKospiPbrValues);
+        const minValue = Math.min(...recentKospiPbrValues);
+        const rangePadding = (maxValue - minValue) * 0.2;
+        
+        const optionsKospiPbr = {
+            chart: {
+                type: 'line',
+                height: 350
+            },
+            series: [
+                {
+                    name: 'KOSPI PBR',
+                    data: recentKospiPbrValues
+                }
+            ],
+            xaxis: {
+                categories: recentKospiPbrDates
+            },
+            yaxis: {
+                min: minValue - rangePadding,
+                max: maxValue + rangePadding,
+                labels: {
+                    formatter: formatNumber
+                }
+            },
+            title: {
+                text: 'KOSPI PBR',
+                align: 'center'
+            }
+        };
+        var chartKospiPbr = new ApexCharts(document.querySelector("#chart-kospi-pbr"), optionsKospiPbr);
+        chartKospiPbr.render().then(() => {
+            renderIndexChange('index-kospi-pbr', recentKospiPbrValues, 'KOSPI PBR');
         });
     }
 }

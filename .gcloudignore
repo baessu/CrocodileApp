@@ -17,3 +17,12 @@
 __pycache__/
 # Ignored by the build system
 /setup.cfg
+venv/
+__pycache__/
+.DS_Store
+*.pyc
+.vscode/
+supabase/
+asset_types.csv
+init_db.py
+.env

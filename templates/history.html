@@ -34,9 +34,9 @@
                                     <thead>
                                         <tr>
                                             <th>날짜</th>
-                                            <th>총 자산</th>
-                                            <th>총 부채</th>
-                                            <th>순자산</th>
+                                            <th>총 자산(원)</th>
+                                            <th>총 부채(원)</th>
+                                            <th>순자산(원)</th>
                                             <th>삭제</th>
                                         </tr>
                                     </thead>
@@ -174,7 +174,7 @@
                                 </tr>
                             `;
                         });
-        
+                        //console.log("Rendering chart with snapshots:", snapshots); // Add logging here
                         renderChart(snapshots);
                     })
                     .catch(error => {

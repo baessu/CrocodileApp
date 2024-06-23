@@ -13,3 +13,6 @@ yfinance==0.2.40
 supabase
 numpy
 google-cloud-profiler
+gunicorn
+python-dateutil
+pykrx

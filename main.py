@@ -1,12 +1,10 @@
 import secrets
 import yfinance as yf
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Flask, render_template, request, redirect, url_for, jsonify, g
-#from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_required, logout_user, current_user
 from flask_migrate import Migrate
-#from models import db, User, AssetType, UserAsset, UserLiability, Snapshot
 from auth import auth as auth_blueprint
 import requests
 import pandas as pd
@@ -15,6 +13,11 @@ import os
 from supabase import create_client, Client
 from models import User
 import googlecloudprofiler
+from dateutil import parser
+from pykrx import stock
+
+
+KST = timezone(timedelta(hours=9))  # Korea Standard Time (UTC+9)
 
 def initialize_profiler():
     """
@@ -80,7 +83,6 @@ def load_user(user_id):
     return None
 
 app.register_blueprint(auth_blueprint)
-
 
 
 
@@ -299,21 +301,36 @@ def get_snapshots():
     try:
         user_id = current_user.id
         response = supabase.table('snapshot').select('*').eq('user_id', user_id).execute()
-        snapshots = response.data
+        if response.data is None:
+            raise Exception("Failed to fetch snapshots")
         
-        snapshot_data = [{
-            'id': snapshot['id'],
-            'date': snapshot['date'],
-            'total_assets': snapshot['total_assets'],
-            'total_liabilities': snapshot['total_liabilities'],
-            'net_worth': snapshot['net_worth']
-        } for snapshot in snapshots]
+        snapshots = response.data
+        snapshot_data = []
+        
+        for snapshot in snapshots:
+            try:
+                # Use dateutil.parser to handle the date format
+                utc_date = parser.isoparse(snapshot['date'])
+                kst_date = utc_date.astimezone(KST).strftime('%Y-%m-%d')
+                snapshot_data.append({
+                    'id': snapshot['id'],
+                    'date': kst_date,
+                    'total_assets': snapshot['total_assets'],
+                    'total_liabilities': snapshot['total_liabilities'],
+                    'net_worth': snapshot['net_worth']
+                })
+            except Exception as e:
+                app.logger.error(f"Error converting date for snapshot {snapshot['id']}: {e}")
+                raise
 
         return jsonify({'snapshots': snapshot_data}), 200
     except Exception as e:
         app.logger.error(f"Error fetching snapshots: {e}")
         return jsonify({'error': 'Error fetching snapshots'}), 500
 
+
+    
+    
 @app.route('/snapshot', methods=['POST'])
 @login_required
 def snapshot():
@@ -324,7 +341,8 @@ def snapshot():
 
         if assets_response.data is None or liabilities_response.data is None:
             raise Exception("Failed to fetch assets or liabilities")
-        date = datetime.now()
+        
+        date = datetime.utcnow().isoformat()
         assets = assets_response.data
         liabilities = liabilities_response.data
 
@@ -337,7 +355,7 @@ def snapshot():
 
         new_snapshot = {
             'user_id': user_id,
-            'date': datetime.utcnow().isoformat(),  # Add current date and time
+            'date': date,  
             'total_assets': total_assets,
             'total_liabilities': total_liabilities,
             'net_worth': net_worth,
@@ -406,15 +424,25 @@ def history():
         response = supabase.table('snapshot').select('*').eq('user_id', user_id).execute()
         if response.data is None:
             raise Exception("Failed to fetch snapshots")
-
+        
         snapshots = response.data
-        snapshot_data = [{
-            'id': snapshot['id'],
-            'date': snapshot['date'],
-            'total_assets': snapshot['total_assets'],
-            'total_liabilities': snapshot['total_liabilities'],
-            'net_worth': snapshot['net_worth']
-        } for snapshot in snapshots]
+        snapshot_data = []
+        
+        for snapshot in snapshots:
+            try:
+                # Use dateutil.parser to handle the date format
+                utc_date = parser.isoparse(snapshot['date'])
+                kst_date = utc_date.astimezone(KST).strftime('%Y-%m-%d')
+                snapshot_data.append({
+                    'id': snapshot['id'],
+                    'date': kst_date,
+                    'total_assets': snapshot['total_assets'],
+                    'total_liabilities': snapshot['total_liabilities'],
+                    'net_worth': snapshot['net_worth']
+                })
+            except Exception as e:
+                app.logger.error(f"Error converting date for snapshot {snapshot['id']}: {e}")
+                raise
 
         return render_template('history.html', snapshots=snapshot_data)
     except Exception as e:
@@ -465,6 +493,44 @@ def calculate_disparity(prices, window):
     moving_average = prices.rolling(window=window).mean()
     disparity = (prices / moving_average) * 100
     return disparity.fillna(0).tolist()
+
+
+def fetch_kospi_pbr_data(start_date, end_date):
+    url = "https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
+    payload = {
+        'bld': 'dbms/MDC/STAT/standard/MDCSTAT00702',
+        'locale': 'ko_KR',
+        'searchType': 'P',
+        'idxIndMidclssCd': '02',
+        'trdDd': end_date,
+        'tboxindTpCd_finder_equidx0_0': '코스피',
+        'indTpCd': '1',
+        'indTpCd2': '001',
+        'codeNmindTpCd_finder_equidx0_0': '코스피',
+        'param1indTpCd_finder_equidx0_0': '',
+        'strtDd': start_date,
+        'endDd': end_date,
+        'csvxls_isNo': 'false'
+    }
+    
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    response = requests.post(url, data=payload, headers=headers)
+    response.raise_for_status()  # Ensure the request was successful
+    return response.json()
+
+def create_dataframe_from_response(response_data):
+    data = [
+        (item['TRD_DD'], float(item['WT_STKPRC_NETASST_RTO'].replace(',', '')))
+        for item in response_data['output']
+    ]
+    df = pd.DataFrame(data, columns=['Date', 'PBR'])
+    df['Date'] = pd.to_datetime(df['Date'])
+    df.sort_values(by='Date', inplace=True)  # 날짜 오름차순으로 정렬
+
+    return df
 
 @app.route('/api/economic_indicators', methods=['GET'])
 @login_required
@@ -520,12 +586,41 @@ def api_economic_indicators():
     except Exception as e:
         app.logger.error(f"Error fetching or calculating data from Naver: {e}")
 
+    # Fetch KOSPI PBR data for the last 30 days
+    try:
+        today = datetime.today()
+        start_date_30 = (today - timedelta(days=30)).strftime("%Y%m%d")
+        end_date = today.strftime("%Y%m%d")
+        
+        response_data = fetch_kospi_pbr_data(start_date_30, end_date)
+        # app.logger.debug(f"Raw KOSPI PBR data: {response_data}")
+
+        kospi_pbr_df = create_dataframe_from_response(response_data)
+        # app.logger.debug(f"KOSPI PBR DataFrame: {kospi_pbr_df}")
+
+        data['kospi_pbr_dates'] = kospi_pbr_df['Date'].dt.strftime('%Y-%m-%d').tolist()
+        data['kospi_pbr_values'] = kospi_pbr_df['PBR'].tolist()
+        
+        # app.logger.info(f"KOSPI PBR Dates: {data['kospi_pbr_dates']}")
+        # app.logger.info(f"KOSPI PBR Values: {data['kospi_pbr_values']}")
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching KOSPI PBR data: {e}")
+        
+        
+        
     # Filter data to only include the most recent year
     if len(data['dates']) > 365:
         for key in data.keys():
             data[key] = data[key][-365:]
 
     return jsonify(data)
+
+
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
