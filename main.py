@@ -15,6 +15,7 @@ from models import User
 import googlecloudprofiler
 from dateutil import parser
 from pykrx import stock
+from economic_indicators import get_economic_indicators
 
 
 KST = timezone(timedelta(hours=9))  # Korea Standard Time (UTC+9)
@@ -459,165 +460,82 @@ def retirement():
 def economic_indicators():
     return render_template('economic_indicators.html')
 
-class NaverWebIo:
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    @staticmethod
-    def fetch(ticker, count, timeframe='day'):
-        url = "http://fchart.stock.naver.com/sise.nhn"
-        params = {
-            'symbol': ticker,
-            'timeframe': timeframe,
-            'count': count,
-            'requestType': '0'
-        }
-        response = requests.get(url, headers=NaverWebIo.headers, params=params)
-        response.raise_for_status()
-        return response.text
-
-def extract_prices(ticker, count=2000):
-    xml_data = NaverWebIo.fetch(ticker, count, "day")
-    root = ET.fromstring(xml_data)
-    items = root.find('chartdata').findall('item')
-    data = []
-    for item in items:
-        date, now, _, _, close, _ = item.get('data').split('|')
-        data.append([date, now, close])
-    df = pd.DataFrame(data, columns=['Date', 'Now', 'Close'])
-    df['Date'] = pd.to_datetime(df['Date'])
-    df['Close'] = df['Close'].astype(float)
-    df.set_index('Date', inplace=True)
-    return df
-
-def calculate_disparity(prices, window):
-    moving_average = prices.rolling(window=window).mean()
-    disparity = (prices / moving_average) * 100
-    return disparity.fillna(0).tolist()
-
-
-def fetch_kospi_pbr_data(start_date, end_date):
-    url = "https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
-    payload = {
-        'bld': 'dbms/MDC/STAT/standard/MDCSTAT00702',
-        'locale': 'ko_KR',
-        'searchType': 'P',
-        'idxIndMidclssCd': '02',
-        'trdDd': end_date,
-        'tboxindTpCd_finder_equidx0_0': '코스피',
-        'indTpCd': '1',
-        'indTpCd2': '001',
-        'codeNmindTpCd_finder_equidx0_0': '코스피',
-        'param1indTpCd_finder_equidx0_0': '',
-        'strtDd': start_date,
-        'endDd': end_date,
-        'csvxls_isNo': 'false'
-    }
-    
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-
-    response = requests.post(url, data=payload, headers=headers)
-    response.raise_for_status()  # Ensure the request was successful
-    return response.json()
-
-def create_dataframe_from_response(response_data):
-    data = [
-        (item['TRD_DD'], float(item['WT_STKPRC_NETASST_RTO'].replace(',', '')))
-        for item in response_data['output']
-    ]
-    df = pd.DataFrame(data, columns=['Date', 'PBR'])
-    df['Date'] = pd.to_datetime(df['Date'])
-    df.sort_values(by='Date', inplace=True)  # 날짜 오름차순으로 정렬
-
-    return df
-
 @app.route('/api/economic_indicators', methods=['GET'])
 @login_required
 def api_economic_indicators():
     fred_api_key = os.getenv('FRED_API_KEY')
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=365*3)  # 3 years of data
-    recent_start_date = end_date - timedelta(days=365)  # 1 year of data
-    start_date_str = start_date.strftime('%Y-%m-%d')
-    recent_start_date_str = recent_start_date.strftime('%Y-%m-%d')
-    end_date_str = end_date.strftime('%Y-%m-%d')
-
-    fred_indicators = {
-        'nasdaq': 'NASDAQCOM',
-        'sp500': 'SP500'
-    }
-
-    data = {'dates': []}
-    
-    # Fetch data from FRED
-    for key, fred_id in fred_indicators.items():
-        try:
-            response = requests.get(f'https://api.stlouisfed.org/fred/series/observations', params={
-                'api_key': fred_api_key,
-                'file_type': 'json',
-                'series_id': fred_id,
-                'observation_start': start_date_str,
-                'observation_end': end_date_str
-            })
-            response.raise_for_status()
-            observations = response.json().get('observations', [])
-            dates = [obs['date'] for obs in observations]
-            values = [float(obs['value']) for obs in observations if obs['value'] != '.']
-            if not data['dates']:
-                data['dates'] = dates
-            data[key] = values
-        except requests.exceptions.RequestException as e:
-            app.logger.error(f"Error fetching {key} data from FRED: {e}")
-
-    # Fetch data from Naver API for KOSPI and KOSDAQ
-    try:
-        kospi_data = extract_prices('KOSPI', 3000)
-        kosdaq_data = extract_prices('KOSDAQ', 3000)
-        data['dates'] = kospi_data.index.strftime('%Y-%m-%d').tolist()
-        data['kospi'] = kospi_data['Close'].tolist()
-        data['kosdaq'] = kosdaq_data['Close'].tolist()
-
-        # Calculate disparity indices
-        kospi_close = kospi_data['Close']
-        data['kospi_disparity_20'] = calculate_disparity(kospi_close, 20)
-        data['kospi_disparity_60'] = calculate_disparity(kospi_close, 60)
-        data['kospi_disparity_200'] = calculate_disparity(kospi_close, 200)
-    except Exception as e:
-        app.logger.error(f"Error fetching or calculating data from Naver: {e}")
-
-    # Fetch KOSPI PBR data for the last 30 days
-    try:
-        today = datetime.today()
-        start_date_30 = (today - timedelta(days=30)).strftime("%Y%m%d")
-        end_date = today.strftime("%Y%m%d")
-        
-        response_data = fetch_kospi_pbr_data(start_date_30, end_date)
-        # app.logger.debug(f"Raw KOSPI PBR data: {response_data}")
-
-        kospi_pbr_df = create_dataframe_from_response(response_data)
-        # app.logger.debug(f"KOSPI PBR DataFrame: {kospi_pbr_df}")
-
-        data['kospi_pbr_dates'] = kospi_pbr_df['Date'].dt.strftime('%Y-%m-%d').tolist()
-        data['kospi_pbr_values'] = kospi_pbr_df['PBR'].tolist()
-        
-        # app.logger.info(f"KOSPI PBR Dates: {data['kospi_pbr_dates']}")
-        # app.logger.info(f"KOSPI PBR Values: {data['kospi_pbr_values']}")
-        
-    except Exception as e:
-        app.logger.error(f"Error fetching KOSPI PBR data: {e}")
-        
-        
-        
-    # Filter data to only include the most recent year
-    if len(data['dates']) > 365:
-        for key in data.keys():
-            data[key] = data[key][-365:]
-
+    start_date = end_date - timedelta(days=365*3)
+    data = get_economic_indicators(fred_api_key, start_date, end_date)
     return jsonify(data)
 
 
+@app.route('/budget')
+@login_required
+def budget():
+    try:
+        user_id = current_user.id
+        response = supabase.table('user_budget').select('*').eq('user_id', user_id).execute()
+        if response.data is None:
+            raise Exception("Failed to fetch budget entries")
 
+        budget_entries = response.data
+        budget_data = []
+        #app.logger.debug(budget_entries)
+        for entry in budget_entries:
+            budget_data.append({
+                'id': entry['id'],
+                'year': entry['year'],
+                'month': entry['month'],
+                'category': entry['category'],
+                'sub_category': entry['sub_category'],
+                'amount': entry['amount'],
+                'description': entry['description']
+            })
+        #app.logger.debug(budget_data)
+        return render_template('budget.html', budget_entries=budget_data)
+    except Exception as e:
+        app.logger.error(f"Error fetching budget: {e}")
+        return jsonify({'error': 'Error fetching budget'}), 500
+
+@app.route('/add_budget_entry', methods=['POST'])
+@login_required
+def add_budget_entry():
+    try:
+        user_id = current_user.id
+        data = request.json
+        new_entry = {
+            "user_id": user_id,
+            "year": data['year'],
+            "month": data['month'],
+            "category": data['category'],
+            "sub_category": data['sub_category'],
+            "amount": data['amount'],
+            "description": data['description']
+        }
+
+        response = supabase.table('user_budget').insert(new_entry).execute()
+        if not response.data:
+            raise Exception("Failed to add budget entry")
+
+        return jsonify(success=True, id=response.data[0]['id'])
+    except Exception as e:
+        app.logger.error(f"Error adding budget entry: {e}")
+        return jsonify
+
+@app.route('/delete_budget_entry/<int:entry_id>', methods=['DELETE'])
+@login_required
+def delete_budget_entry(entry_id):
+    try:
+        user_id = current_user.id
+        response = supabase.table('user_budget').delete().eq('id', entry_id).eq('user_id', user_id).execute()
+        if response.data is None:
+            raise Exception("Failed to delete budget entry")
+
+        return jsonify(success=True)
+    except Exception as e:
+        app.logger.error(f"Error deleting budget entry: {e}")
+        return jsonify(success=False), 500
 
 
 
