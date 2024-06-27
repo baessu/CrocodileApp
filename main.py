@@ -16,7 +16,7 @@ import googlecloudprofiler
 from dateutil import parser
 from pykrx import stock
 from economic_indicators import get_economic_indicators
-
+import json
 
 KST = timezone(timedelta(hours=9))  # Korea Standard Time (UTC+9)
 
@@ -26,44 +26,31 @@ def initialize_profiler():
     """
     try:
         googlecloudprofiler.start(
-            service="hello-profiler",  # 프로파일러에서 사용할 서비스 이름
-            service_version="1.0.1",  # 애플리케이션 버전
-            verbose=3,  # 로깅 수준 (0-오류, 1-경고, 2-정보, 3-디버그)
-            # GCP에서 실행되지 않는 경우 프로젝트 ID 지정
-            # project_id='my-project-id',
+            service="hello-profiler",
+            service_version="1.0.1",
+            verbose=3,
         )
     except (ValueError, NotImplementedError) as exc:
-        print(f"프로파일러 초기화 오류: {exc}")  # 초기화 오류 처리
+        print(f"프로파일러 초기화 오류: {exc}")
 
 def main():
     """
     애플리케이션의 메인 진입점입니다.
     """
     initialize_profiler()
-    # 여기에서 애플리케이션의 나머지 초기화를 수행합니다.
-    # 예: 데이터베이스 연결, 로깅 설정, 기타 서비스 초기화 등
-
-    # 애플리케이션의 주요 로직 실행
     print("애플리케이션이 시작되었습니다.")
-
 
 load_dotenv()
 app = Flask(__name__)
-#db = SQLAlchemy()
 
-# 안전한 SECRET_KEY 생성 및 설정
 app.config['SECRET_KEY'] = secrets.token_hex(24)
-app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=1)  # 세션 유지 시간을 7일로 설정
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=1)
 # app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
-supabase = create_client(supabase_url,supabase_key)
-
-# db.init_app(app)
-#migrate = Migrate(app, supabase)
+supabase = create_client(supabase_url, supabase_key)
 
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
@@ -84,8 +71,6 @@ def load_user(user_id):
     return None
 
 app.register_blueprint(auth_blueprint)
-
-
 
 @app.template_filter('format_currency')
 def format_currency(value):
@@ -112,27 +97,21 @@ def index():
 @login_required
 def dashboard():
     user_id = current_user.id
-    
     try:
-        # Fetch assets, liabilities, and asset types from Supabase
         assets_response = supabase.table('user_asset').select('*').eq('user_id', user_id).execute()
         liabilities_response = supabase.table('user_liability').select('*').eq('user_id', user_id).execute()
         asset_types_response = supabase.table('asset_type').select('*').execute()
 
-        # Extract data from responses
         assets = assets_response.data if assets_response.data else []
         liabilities = liabilities_response.data if liabilities_response.data else []
         asset_types = asset_types_response.data if asset_types_response.data else []
 
-        # Create a dictionary of asset types for quick lookup
         asset_type_dict = {asset_type['id']: asset_type for asset_type in asset_types}
 
-        # Add asset type details to each asset
         for asset in assets:
             asset_type_id = asset['asset_type_id']
             asset['asset_type'] = asset_type_dict.get(asset_type_id, {})
 
-        # Add liability type details to each liability
         for liability in liabilities:
             liability_type_id = liability['liability_type_id']
             liability['liability_type'] = asset_type_dict.get(liability_type_id, {})
@@ -142,7 +121,6 @@ def dashboard():
         assets, liabilities, asset_types = [], [], []
 
     return render_template('dashboard.html', assets=assets, liabilities=liabilities, asset_types=asset_types)
-
 
 @app.route('/logout')
 @login_required
@@ -155,13 +133,8 @@ def logout():
 def asset_data():
     try:
         user_id = current_user.id
-        #app.logger.info(f"Fetching assets for user_id: {user_id}")
-        
         assets_response = supabase.table('user_asset').select('*').eq('user_id', user_id).execute()
-        #app.logger.info(f"Assets Response: {assets_response.data}")
-        
         liabilities_response = supabase.table('user_liability').select('*').eq('user_id', user_id).execute()
-        #app.logger.info(f"Liabilities Response: {liabilities_response.data}")
 
         if not assets_response.data or not liabilities_response.data:
             app.logger.error(f"Error fetching asset data: {assets_response} {liabilities_response}")
@@ -170,9 +143,6 @@ def asset_data():
         asset_data = [{'name': asset['nickname'], 'nature': asset['asset_type_id'], 'value': asset['value']} for asset in assets_response.data]
         liability_data = [{'name': liability['nickname'], 'nature': 'liability', 'value': liability['value']} for liability in liabilities_response.data]
 
-        #app.logger.info(f"Asset Data: {asset_data}")
-        #app.logger.info(f"Liability Data: {liability_data}")
-
         return jsonify({'assets': asset_data, 'liabilities': liability_data})
     except Exception as e:
         app.logger.error(f"Error fetching asset data: {e}", exc_info=True)
@@ -180,8 +150,6 @@ def asset_data():
 
 def parse_currency(value):
     return float(value.replace(',', ''))
-
-
 
 @app.route('/add_asset', methods=['POST'])
 @login_required
@@ -245,10 +213,14 @@ def delete_asset(asset_id):
     try:
         user_id = current_user.id
         response = supabase.table('user_asset').delete().eq('id', asset_id).eq('user_id', user_id).execute()
-        return jsonify({'success': True}), 200
+        if response.data:
+            return jsonify({'success': True}), 200
+        else:
+            app.logger.error(f"Error deleting asset: {response}")
+            return jsonify({'success': False, 'message': 'Error deleting asset'}), 404
     except Exception as e:
         app.logger.error(f"Error deleting asset: {e}")
-        return jsonify({'success': False}), 404
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/delete_liability/<int:liability_id>', methods=['DELETE'])
 @login_required
@@ -256,11 +228,14 @@ def delete_liability(liability_id):
     try:
         user_id = current_user.id
         response = supabase.table('user_liability').delete().eq('id', liability_id).eq('user_id', user_id).execute()
-        return jsonify({'success': True}), 200
+        if response.data:
+            return jsonify({'success': True}), 200
+        else:
+            app.logger.error(f"Error deleting liability: {response}")
+            return jsonify({'success': False, 'message': 'Error deleting liability'}), 404
     except Exception as e:
         app.logger.error(f"Error deleting liability: {e}")
-        return jsonify({'success': False}), 404
-
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/update_asset/<int:asset_id>', methods=['POST'])
 @login_required
@@ -271,7 +246,11 @@ def update_asset(asset_id):
         if 'value' in data:
             update_data = {'value': float(data['value'])}
             response = supabase.table('user_asset').update(update_data).eq('id', asset_id).eq('user_id', user_id).execute()
-            return jsonify({'success': True}), 200
+            if response.data:
+                return jsonify({'success': True}), 200
+            else:
+                app.logger.error(f"Error updating asset: {response}")
+                return jsonify({'success': False, 'message': 'Error updating asset'}), 400
         else:
             return jsonify({'success': False, 'message': 'Value not provided'}), 400
     except Exception as e:
@@ -287,14 +266,16 @@ def update_liability(liability_id):
         if 'value' in data:
             update_data = {'value': float(data['value'])}
             response = supabase.table('user_liability').update(update_data).eq('id', liability_id).eq('user_id', user_id).execute()
-            return jsonify({'success': True}), 200
+            if response.data:
+                return jsonify({'success': True}), 200
+            else:
+                app.logger.error(f"Error updating liability: {response}")
+                return jsonify({'success': False, 'message': 'Error updating liability'}), 400
         else:
             return jsonify({'success': False, 'message': 'Value not provided'}), 400
     except Exception as e:
         app.logger.error(f"Error updating liability: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
-
-import json
 
 @app.route('/api/snapshots', methods=['GET'])
 @login_required
@@ -302,7 +283,7 @@ def get_snapshots():
     try:
         user_id = current_user.id
         response = supabase.table('snapshot').select('*').eq('user_id', user_id).execute()
-        if response.data is None:
+        if not response.data:
             raise Exception("Failed to fetch snapshots")
         
         snapshots = response.data
@@ -310,7 +291,6 @@ def get_snapshots():
         
         for snapshot in snapshots:
             try:
-                # Use dateutil.parser to handle the date format
                 utc_date = parser.isoparse(snapshot['date'])
                 kst_date = utc_date.astimezone(KST).strftime('%Y-%m-%d')
                 snapshot_data.append({
@@ -329,9 +309,6 @@ def get_snapshots():
         app.logger.error(f"Error fetching snapshots: {e}")
         return jsonify({'error': 'Error fetching snapshots'}), 500
 
-
-    
-    
 @app.route('/snapshot', methods=['POST'])
 @login_required
 def snapshot():
@@ -360,8 +337,8 @@ def snapshot():
             'total_assets': total_assets,
             'total_liabilities': total_liabilities,
             'net_worth': net_worth,
-            'asset_details': json.dumps(asset_details),  # Serialize details to JSON
-            'liability_details': json.dumps(liability_details)  # Serialize details to JSON
+            'asset_details': json.dumps(asset_details),
+            'liability_details': json.dumps(liability_details)
         }
         response = supabase.table('snapshot').insert(new_snapshot).execute()
         if not response.data:
@@ -377,7 +354,6 @@ def snapshot():
 def delete_snapshot(snapshot_id):
     try:
         user_id = current_user.id
-        # Check if the snapshot exists
         response = supabase.table('snapshot').select('*').eq('id', snapshot_id).eq('user_id', user_id).execute()
         snapshot = response.data
         
@@ -385,12 +361,15 @@ def delete_snapshot(snapshot_id):
             app.logger.error(f"Snapshot with ID {snapshot_id} not found for user {user_id}.")
             return jsonify({'success': False, 'error': 'Snapshot not found or unauthorized'}), 404
         
-        # Proceed to delete the snapshot
         delete_response = supabase.table('snapshot').delete().eq('id', snapshot_id).eq('user_id', user_id).execute()
-        return jsonify({'success': True}), 200
+        if delete_response.data:
+            return jsonify({'success': True}), 200
+        else:
+            app.logger.error(f"Error deleting snapshot: {delete_response}")
+            return jsonify({'success': False, 'message': 'Error deleting snapshot'}), 404
     except Exception as e:
         app.logger.error(f"Error deleting snapshot: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/snapshot_details/<int:snapshot_id>', methods=['GET'])
 @login_required
@@ -404,7 +383,7 @@ def snapshot_details(snapshot_id):
             app.logger.error(f"Snapshot with ID {snapshot_id} not found for user {user_id}.")
             return jsonify({'error': 'Snapshot not found or unauthorized'}), 404
 
-        snapshot_data = snapshot[0]  # Get the first element from the response data
+        snapshot_data = snapshot[0]
 
         asset_details = json.loads(snapshot_data['asset_details'])
         liability_details = json.loads(snapshot_data['liability_details'])
@@ -431,7 +410,6 @@ def history():
         
         for snapshot in snapshots:
             try:
-                # Use dateutil.parser to handle the date format
                 utc_date = parser.isoparse(snapshot['date'])
                 kst_date = utc_date.astimezone(KST).strftime('%Y-%m-%d')
                 snapshot_data.append({
@@ -469,7 +447,6 @@ def api_economic_indicators():
     data = get_economic_indicators(fred_api_key, start_date, end_date)
     return jsonify(data)
 
-
 @app.route('/budget')
 @login_required
 def budget():
@@ -481,7 +458,6 @@ def budget():
 
         budget_entries = response.data
         budget_data = []
-        #app.logger.debug(budget_entries)
         for entry in budget_entries:
             budget_data.append({
                 'id': entry['id'],
@@ -492,7 +468,6 @@ def budget():
                 'amount': entry['amount'],
                 'description': entry['description']
             })
-        #app.logger.debug(budget_data)
         return render_template('budget.html', budget_entries=budget_data)
     except Exception as e:
         app.logger.error(f"Error fetching budget: {e}")
@@ -521,7 +496,7 @@ def add_budget_entry():
         return jsonify(success=True, id=response.data[0]['id'])
     except Exception as e:
         app.logger.error(f"Error adding budget entry: {e}")
-        return jsonify
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/delete_budget_entry/<int:entry_id>', methods=['DELETE'])
 @login_required
@@ -535,13 +510,7 @@ def delete_budget_entry(entry_id):
         return jsonify(success=True)
     except Exception as e:
         app.logger.error(f"Error deleting budget entry: {e}")
-        return jsonify(success=False), 500
-
-
-
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
-    #app.run(port=8080)
-    
-    

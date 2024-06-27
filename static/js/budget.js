@@ -1,3 +1,24 @@
+function formatCurrency(input) {
+    let value = input.value.replace(/,/g, '');  // Remove existing commas
+    value = parseFloat(value);  // Convert to float
+    if (!isNaN(value)) {
+        input.value = value.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
+    }
+}
+
+function parseCurrency(input) {
+    let value = input.value.replace(/,/g, '');  // Remove commas
+    value = parseFloat(value);  // Convert to float
+    if (!isNaN(value)) {
+        input.value = value.toString();  // Convert back to string
+    }
+}
+
+
+
 let budgetEntries = [];
 let chart;
 
@@ -7,11 +28,16 @@ const categoryTranslations = {
     Savings: "저축/투자"
 };
 
+
+
+
 document.addEventListener('DOMContentLoaded', function () {
     initializeBudgetForm();
     initializeChart();
     loadInitialBudgetEntries(initialBudgetEntries);
 });
+
+
 
 function initializeBudgetForm() {
     const monthList = document.querySelector('.grid-container');
@@ -381,9 +407,8 @@ function classify_budget(initialBudgetEntries) {
 function initializeChart() {
     const options = {
         chart: {
-            type: 'bar',
+            type: 'line',
             height: 350,
-            stacked: true,
             width: '100%',
             animations: {
                 enabled: true
@@ -432,7 +457,6 @@ function initializeChart() {
 }
 
 
-
 function updateChart(budgetEntries) {
     const monthCategoryTotals = classify_budget(budgetEntries);
 
@@ -449,6 +473,7 @@ function updateChart(budgetEntries) {
     // Prepare series data
     const series = categories.map(category => ({
         name: category,
+        type: 'bar',
         data: months.map(month => monthCategoryTotals[month][category])
     }));
 

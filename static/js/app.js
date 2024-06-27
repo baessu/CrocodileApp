@@ -25,60 +25,34 @@ export function initializeSortable() {
     }
 }
 
-function showAddAssetModal() {
-    $('#addAssetModal').modal('show');
+function showModal(modalId) {
+    $(`#${modalId}`).modal('show');
 }
 
-function showAddLiabilityModal() {
-    $('#addLiabilityModal').modal('show');
-}
+function addItem(type) {
+    const selectElement = document.getElementById(`${type}_type_id`);
+    const selectedItem = selectElement.options[selectElement.selectedIndex];
+    const itemName = selectedItem.text;
+    const itemCategory = selectedItem.getAttribute('data-category');
+    const itemNature = selectedItem.getAttribute('data-nature');
+    const itemValue = 0;
 
-function addAsset() {
-    const assetSelect = document.getElementById('asset_type_id');
-    const selectedAsset = assetSelect.options[assetSelect.selectedIndex];
-    const assetName = selectedAsset.text;
-    const assetCategory = selectedAsset.getAttribute('data-category');
-    const assetNature = selectedAsset.getAttribute('data-nature');
-    const assetValue = 0;
-
-    const table = document.getElementById('assetsContainer').getElementsByTagName('tbody')[0];
+    const table = document.getElementById(`${type}sContainer`).getElementsByTagName('tbody')[0];
 
     const newRow = table.insertRow();
     newRow.innerHTML = `
         <tr>
-            <td data-category="${assetCategory}" data-nature="${assetNature}">${assetName}</td>
-            <td><input type="text" class="form-control" value="${formatValue(assetValue)}" onchange="updateAssetValue(this, assetId)" oninput="formatCurrency(this)" onblur="parseCurrency(this)"></td>
-            <td><button type="button" class="btn btn-danger" onclick="removeAsset(this, assetId)">X</button></td>
+            <td data-category="${itemCategory}" data-nature="${itemNature}">${itemName}</td>
+            <td><input type="text" class="form-control" value="${formatValue(itemValue)}" onchange="updateItemValue(this, '${type}Id')" oninput="formatCurrency(this)" onblur="parseCurrency(this)"></td>
+            <td><button type="button" class="btn btn-danger" onclick="removeItem(this, '${type}Id')">X</button></td>
         </tr>
     `;
-    $('#addAssetModal').modal('hide');
+    $(`#add${type.charAt(0).toUpperCase() + type.slice(1)}Modal`).modal('hide');
     updateCharts();
 }
 
-function addLiability() {
-    const liabilitySelect = document.getElementById('liability_type_id');
-    const selectedLiability = liabilitySelect.options[liabilitySelect.selectedIndex];
-    const liabilityName = selectedLiability.text;
-    const liabilityCategory = selectedLiability.getAttribute('data-category');
-    const liabilityNature = selectedLiability.getAttribute('data-nature');
-    const liabilityValue = 0;
-
-    const table = document.getElementById('liabilitiesContainer').getElementsByTagName('tbody')[0];
-
-    const newRow = table.insertRow();
-    newRow.innerHTML = `
-        <tr>
-            <td data-category="${liabilityCategory}" data-nature="${liabilityNature}">${liabilityName}</td>
-            <td><input type="text" class="form-control" value="${formatValue(liabilityValue)}" onchange="updateLiabilityValue(this, liabilityId)" oninput="formatCurrency(this)" onblur="parseCurrency(this)"></td>
-            <td><button type="button" class="btn btn-danger" onclick="removeLiability(this, liabilityId)">X</button></td>
-        </tr>
-    `;
-    $('#addLiabilityModal').modal('hide');
-    updateCharts();
-}
-
-function removeAsset(button, assetId) {
-    fetch(`/delete_asset/${assetId}`, {
+function removeItem(button, itemId, type) {
+    fetch(`/delete_${type}/${itemId}`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json'
@@ -90,33 +64,18 @@ function removeAsset(button, assetId) {
             row.remove();
             updateCharts();
         } else {
-            alert('Failed to delete asset');
-        }
-    });
-}
-
-
-function removeLiability(button, liabilityId) {
-    fetch(`/delete_liability/${liabilityId}`, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json'
+            alert(`Failed to delete ${type}`);
         }
     })
-    .then(response => {
-        if (response.ok) {
-            const row = button.closest('tr');
-            row.remove();
-            updateCharts();
-        } else {
-            alert('Failed to delete liability');
-        }
+    .catch(error => {
+        console.error(`Error deleting ${type}:`, error);
+        alert(`Error deleting ${type}: ` + error);
     });
 }
 
-function updateAssetValue(input, assetId) {
+function updateItemValue(input, itemId, type) {
     const value = parseFloat(input.value.replace(/,/g, '')) || 0;
-    fetch(`/update_asset/${assetId}`, {
+    fetch(`/update_${type}/${itemId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -128,35 +87,12 @@ function updateAssetValue(input, assetId) {
         if (data.success) {
             updateCharts();
         } else {
-            alert('Error updating asset value: ' + data.message);
+            alert(`Error updating ${type} value: ` + data.message);
         }
     })
     .catch(error => {
-        console.error('Error updating asset value:', error);
-        alert('Error updating asset value: ' + error);
-    });
-}
-
-function updateLiabilityValue(input, liabilityId) {
-    const value = parseFloat(input.value.replace(/,/g, '')) || 0;
-    fetch(`/update_liability/${liabilityId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ value: value })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            updateCharts();
-        } else {
-            alert('Error updating liability value: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error updating liability value:', error);
-        alert('Error updating liability value: ' + error);
+        console.error(`Error updating ${type} value:`, error);
+        alert(`Error updating ${type} value: ` + error);
     });
 }
 
@@ -183,14 +119,26 @@ function formatValue(value) {
     });
 }
 
-window.showAddAssetModal = showAddAssetModal;
-window.showAddLiabilityModal = showAddLiabilityModal;
-window.addAsset = addAsset;
-window.addLiability = addLiability;
-window.removeAsset = removeAsset;
-window.removeLiability = removeLiability;
-window.updateAssetValue = updateAssetValue;
-window.updateLiabilityValue = updateLiabilityValue;
+// Export functions for global access if needed
+export {
+    showModal,
+    addItem,
+    removeItem,
+    updateItemValue,
+    formatCurrency,
+    parseCurrency,
+    formatValue
+};
+
+// Assign functions to window object for global access if needed
+window.showAddAssetModal = () => showModal('addAssetModal');
+window.showAddLiabilityModal = () => showModal('addLiabilityModal');
+window.addAsset = () => addItem('asset');
+window.addLiability = () => addItem('liability');
+window.removeAsset = (button, assetId) => removeItem(button, assetId, 'asset');
+window.removeLiability = (button, liabilityId) => removeItem(button, liabilityId, 'liability');
+window.updateAssetValue = (input, assetId) => updateItemValue(input, assetId, 'asset');
+window.updateLiabilityValue = (input, liabilityId) => updateItemValue(input, liabilityId, 'liability');
 window.updateCharts = updateCharts;
 window.formatCurrency = formatCurrency;
 window.formatValue = formatValue;

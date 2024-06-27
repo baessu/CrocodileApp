@@ -5,27 +5,46 @@ import xml.etree.ElementTree as ET
 import json
 import os
 import logging
+from google.cloud import storage
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Google Cloud Storage 설정
+BUCKET_NAME = 'graphic-theory-427008-n9.appspot.com'  # 자신의 버킷 이름으로 변경
 CACHE_FILE = 'data_cache.json'
+client = storage.Client()
 
 def read_cache():
-    if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, 'r') as file:
-            return json.load(file)
-    return {}
+    try:
+        bucket = client.get_bucket(BUCKET_NAME)
+        blob = bucket.blob(CACHE_FILE)
+        if blob.exists():
+            data = blob.download_as_string()
+            return json.loads(data)
+        return {}
+    except Exception as e:
+        logger.error(f"Error reading cache from GCS: {e}")
+        return {}
 
 def write_cache(data):
-    with open(CACHE_FILE, 'w') as file:
-        json.dump(data, file)
+    try:
+        bucket = client.get_bucket(BUCKET_NAME)
+        blob = bucket.blob(CACHE_FILE)
+        blob.upload_from_string(json.dumps(data), content_type='application/json')
+    except Exception as e:
+        logger.error(f"Error writing cache to GCS: {e}")
 
 def update_cache(data):
-    cache = read_cache()
-    cache.update(data)
-    write_cache(cache)
+    try:
+        cache = read_cache()
+        cache.update(data)
+        write_cache(cache)
+    except Exception as e:
+        logger.error(f"Error updating cache: {e}")
+
 
 def fetch_kospi_pbr_data(start_date, end_date):
     url = "https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
@@ -61,6 +80,7 @@ def create_dataframe_from_response(response_data):
             pbr = float(item['WT_STKPRC_NETASST_RTO'].replace(',', ''))
             data.append((date, pbr))
         except ValueError:
+            logger.warning(f"Invalid data found: {item}")
             continue
     df = pd.DataFrame(data, columns=['Date', 'PBR'])
     df['Date'] = pd.to_datetime(df['Date'])

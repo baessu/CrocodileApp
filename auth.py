@@ -4,14 +4,16 @@ from flask_login import login_user, logout_user, login_required
 from models import User
 
 from supabase import create_client, Client
+from dotenv import load_dotenv
 import os
 
-auth = Blueprint('auth', __name__)
-
 # Load environment variables
+load_dotenv()
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
 supabase = create_client(supabase_url, supabase_key)
+
+auth = Blueprint('auth', __name__)
 
 def add_placeholder_assets_and_liabilities(user_id):
     placeholder_assets = [
@@ -40,7 +42,7 @@ def signup():
             flash('Email address already exists', 'error')
             return redirect(url_for('auth.signup'))
 
-        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+        hashed_password = generate_password_hash(password)
         user = User.create_user(email, username, hashed_password)
 
         if user:
@@ -61,12 +63,11 @@ def login():
         user_data = response.data[0] if response.data else None
 
         if not user_data or not check_password_hash(user_data['password'], password):
-            flash('Please check your login details and try again.','error')
+            flash('Please check your login details and try again.', 'error')
             return redirect(url_for('auth.login'))
 
         user = User(user_data)
         login_user(user, remember=True)  # 세션을 기억하도록 설정
-        login_user(user)
         return redirect(url_for('dashboard'))
 
     return render_template('index.html')
