@@ -28,14 +28,14 @@ gtag('config', 'G-TC829VBX7Y');
 
 </style>
 <body>
-    <div class="container mt-5" style="display: flex; flex-direction: column; align-items: center;">
-        <div class="text-center mb-5">
-            <img src="{{ url_for('static', filename='images/croc_logo.png') }}" alt="Logo" style="width: 90%; max-width: 720px;">
-            <h1 class="headline">💰 입벌린 악어 💰</h1>
+    <div class="container" style="display: flex; flex-direction: row; align-items: center; justify-content: center; height: 100%;">
+        <div class="text-center mb-5 col-sm-5">
+            <img src="{{ url_for('static', filename='images/croc_logo.png') }}" alt="Logo" style="width: 80%; max-width: 720px;">
+            <h1 class="headline mb-4">💰 입벌린 악어 💰</h1>
+            <h2 class="mb-4">크왕~! </h2>
         </div>
         
-        <div class="col-sm-4 text-center mb-3 ">
-            <h2 class="mb-4">크왕~! </h2>
+        <div class="col-sm-4 text-left ">
             <form action="{{ url_for('auth.login') }}" method="post">
                 <div class="form-group">
                     <label for="email">이메일</label>
@@ -45,12 +45,13 @@ gtag('config', 'G-TC829VBX7Y');
                     <label for="password">비밀번호</label>
                     <input type="password" name="password" id="password" class="form-control" required>
                 </div>
-                <button type="submit" class="btn btn-primary">로그인</button>
+                <button type="submit" class="btn btn-primary mb-3 ">로그인</button>
             </form>
+            <div class="text-left mb-5">
+                <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary">회원가입</a>
+            </div>
         </div>
-        <div class="text-center mb-5">
-            <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary">회원가입</a>
-        </div>
+        
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function() {

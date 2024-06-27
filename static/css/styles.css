@@ -6,6 +6,9 @@ body, html {
     padding: 0;
     height: 100%;
     width: 100%;
+    font-size: .96rem;
+    font-weight: 400;
+
 }
 
 /* App Container */
