@@ -98,8 +98,22 @@ def index():
 def dashboard():
     user_id = current_user.id
     try:
-        assets_response = supabase.table('user_asset').select('*').eq('user_id', user_id).execute()
-        liabilities_response = supabase.table('user_liability').select('*').eq('user_id', user_id).execute()
+        # 자산 데이터를 asset_type_id 순으로 정렬하여 가져오기
+        assets_response = (
+            supabase.table('user_asset')
+            .select('*')
+            .eq('user_id', user_id)
+            .order('asset_type_id', desc=False)  # asc=True 사용
+            .execute()
+        )
+        # 부채 데이터를 liability_type_id 순으로 정렬하여 가져오기
+        liabilities_response = (
+            supabase.table('user_liability')
+            .select('*')
+            .eq('user_id', user_id)
+            .order('liability_type_id', desc=False)  # asc=True 사용
+            .execute()
+        )
         asset_types_response = supabase.table('asset_type').select('*').execute()
 
         assets = assets_response.data if assets_response.data else []
@@ -115,6 +129,11 @@ def dashboard():
         for liability in liabilities:
             liability_type_id = liability['liability_type_id']
             liability['liability_type'] = asset_type_dict.get(liability_type_id, {})
+
+        # asset_type_id로 오름차순, value로 내림차순 정렬
+        assets.sort(key=lambda x: (x['asset_type_id'], -x['value']))
+        # liability_type_id로 오름차순, value로 내림차순 정렬
+        liabilities.sort(key=lambda x: (x['liability_type_id'], -x['value']))
 
     except Exception as e:
         app.logger.error(f"Error fetching data: {e}", exc_info=True)
@@ -324,8 +343,9 @@ def snapshot():
         assets = assets_response.data
         liabilities = liabilities_response.data
 
-        total_assets = sum(asset['value'] for asset in assets)
+        only_assets = sum(asset['value'] for asset in assets)
         total_liabilities = sum(liability['value'] for liability in liabilities)
+        total_assets = only_assets + total_liabilities
         net_worth = total_assets - total_liabilities
 
         asset_details = [{'name': asset['nickname'], 'type': asset['asset_type_id'], 'value': asset['value']} for asset in assets]

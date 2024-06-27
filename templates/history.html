@@ -226,7 +226,7 @@
                             if (Array.isArray(data.assets)) {
                                 data.assets.forEach(asset => {
                                     const li = document.createElement('li');
-                                    li.textContent = `${asset.type}: ${asset.name} - ${asset.value.toLocaleString()} 원`;
+                                    li.textContent = `${asset.name} : ${asset.value.toLocaleString()} 원`;
                                     assetList.appendChild(li);
                                 });
                             } else {
@@ -236,7 +236,7 @@
                             if (Array.isArray(data.liabilities)) {
                                 data.liabilities.forEach(liability => {
                                     const li = document.createElement('li');
-                                    li.textContent = `${liability.type}: ${liability.name} - ${liability.value.toLocaleString()} 원`;
+                                    li.textContent = `${liability.name} : ${liability.value.toLocaleString()} 원`;
                                     liabilityList.appendChild(li);
                                 });
                             } else {

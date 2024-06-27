@@ -121,9 +121,9 @@ body, html {
 .liability-form,
 .net-worth-container {
     background-color: #ffffff;
-    padding: 40px 36px;
+    padding: 32px 36px;
     border-radius: 16px;
-    margin-bottom: 32px;
+    margin-bottom: 24px;
     width: 100%;
 
 }
@@ -156,7 +156,7 @@ body, html {
     flex: 1;
     padding-right: 0px;
     padding-left: 0px;
-    min-width: 300px;
+    min-width: 350px;
 }
 
 .col-md-6:last-child {
@@ -173,7 +173,7 @@ body, html {
 
 .login-bar {
     background-color: #ffffff;
-    padding: 0px 32px;
+    padding: 0px 28px;
     width: 100%;
     border-radius: 16px;
     margin-top: 24px;
@@ -224,13 +224,13 @@ body, html {
 }
 
 h1 {
-    font-size: 2rem;
+    font-size: 1.65rem;
     font-weight: 700;
     margin-bottom: 0px;
 }
 
 h2 {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 700;
     margin-bottom: 0px;
 }
@@ -238,7 +238,7 @@ h2 {
 p,
 .label,
 .input {
-    font-size: 1rem;
+    font-size: .9rem;
     font-weight: 400;
 }
 
@@ -249,13 +249,14 @@ p,
 
 /* Base Button Styles */
 .btn {
-    padding: 10px 26px;
+    padding: 8px 24px;
     border-radius: 24px;
     border: none;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: .9rem;
     font-weight: 500;
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    margin-right: 8px;
 }
 
 /* Primary Button */
@@ -281,7 +282,7 @@ p,
     border-color: #a2a2a5;
     border-style: solid;
     border-width: 1.5px;
-    padding: 8px 20px;
+    padding: 6px 16px;
     font-weight: 500;
 }
 .btn-secondary:hover {
@@ -396,7 +397,7 @@ p,
     transform: translateX(-50%);
     height: auto;
     width: auto;
-    min-width: 70%;
+    min-width: 80%;
     padding: 10px;
     background-color: #ffffff;
     border: 1px solid #dcdcdf;
@@ -450,10 +451,10 @@ p,
         display: none;
     }
     .asset-form, .liability-form, .net-worth-container {
-        padding: 20px 16px;
+        padding: 16px 14px;
     }
     .content-row {
-        padding: 10px;
+        padding: 0px;
     }
     .row{
         flex-direction: column;
@@ -482,6 +483,9 @@ p,
     .sidebar-sticky {
         height: fit-content;
     }
+    .col-md-8 {
+        max-width: 100%;
+    }
     .main {
         margin-left: 0;
         width: 100%;
@@ -490,7 +494,7 @@ p,
         display: none;
     }
     .asset-form, .liability-form, .net-worth-container {
-        padding: 30px 24px;
+        padding: 26px 20px;
     }
     .content-row {
         padding: 0px;
@@ -504,15 +508,15 @@ p,
 @media (min-width: 769px) {
     /* Laptop (medium devices, laptops/desktops) */
     .sidebar {
-        width: 280px;
+        width: 260px;
     }
 
     .main {
-        margin-left: 280px; /* Ensure this matches the max-width of the sidebar */
+        margin-left: 260px; /* Ensure this matches the max-width of the sidebar */
         width:100%;
     }
     .asset-form, .liability-form, .net-worth-container {
-        padding: 40px 36px;
+        padding: 32px 32px;
     }
     .content-row {
         padding: 0px;

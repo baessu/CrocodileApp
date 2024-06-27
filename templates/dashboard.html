@@ -11,10 +11,12 @@
             border-bottom: 1px solid #a2a2a5;
         }
         .table td, .table th {
-            padding: .75rem;
+            padding: .4rem;
             vertical-align: center;
             border-top: 1.5px solid #e0e0e6;
         }
+
+
         
     </style>
     </head>
@@ -92,7 +94,7 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Snapshot successfully taken.');
+                            alert('자산 스냅샷이 저장되었습니다. 히스토리탭에서 확인해보세요!');
                         } else {
                             alert('Error taking snapshot.');
                         }

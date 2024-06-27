@@ -235,11 +235,11 @@ thead th {
 @media (min-width: 769px) {
     /* Laptop (medium devices, laptops/desktops) */
     .sidebar {
-        width: 280px;
+        width: 260px;
     }
 
     .main {
-        margin-left: 280px; /* Ensure this matches the max-width of the sidebar */
+        margin-left: 260px; /* Ensure this matches the max-width of the sidebar */
         width:100%;
     }
  

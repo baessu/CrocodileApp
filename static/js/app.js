@@ -40,8 +40,9 @@ function addItem(type) {
     const table = document.getElementById(`${type}sContainer`).getElementsByTagName('tbody')[0];
 
     const newRow = table.insertRow();
+    newRow.dataset.id = `new-${Date.now()}`; // Add a unique temporary ID for the new row
     newRow.innerHTML = `
-        <tr>
+        <tr data-id="${newRow.dataset.id}">
             <td data-category="${itemCategory}" data-nature="${itemNature}">${itemName}</td>
             <td><input type="text" class="form-control" value="${formatValue(itemValue)}" onchange="updateItemValue(this, '${type}Id')" oninput="formatCurrency(this)" onblur="parseCurrency(this)"></td>
             <td><button type="button" class="btn btn-danger" onclick="removeItem(this, '${type}Id')">X</button></td>
