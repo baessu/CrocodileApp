@@ -56,7 +56,7 @@ function initializeBudgetForm() {
     const categories = {
         Income: ["월급", "용돈"],
         Expense: {
-            Eat: ["식비", "카페"],
+            Eat: ["식비", "카페", "유흥비"],
             Live: ["대출이자/월세", "관리비", "통신비", "생필품", "보험료", "경조사", "의료비"],
             Wear: ["의류", "잡화", "뷰티/미용"],
             Enjoy: ["취미", "운동", "도서", "여행", "구독서비스"],

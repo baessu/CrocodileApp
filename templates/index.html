@@ -24,11 +24,55 @@ gtag('config', 'G-TC829VBX7Y');
 <style>
     .container{
         background-color: #ffffff;
+        display: flex; 
+        flex-direction: row; 
+        align-items: center; 
+        justify-content: center; 
+        height: 100%;
     }
+    /* Responsive */
+    @media (max-width: 576px) {
+        .container{
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            width: 100%;
+        }
+        .col-sm-5 {
+            max-width: 100%;
+            max-height: 250px;
+        }
+        .col-sm-4 {
+            max-width: 80%;
+        }
+        .mb-5{
+            margin-bottom: 0px;
+        }
 
+    
+    }
+    
+    @media (min-width: 577px) and (max-width: 768px) {
+        .container{
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            width: 100%;
+        }
+        .col-sm-5 {
+        max-width: 100%;
+        max-height: 350px;
+        }
+        .col-sm-4 {
+            max-width: 80%;
+            }
+        .mb-5{
+            margin-bottom: 0px;
+        }
+    }
 </style>
 <body>
-    <div class="container" style="display: flex; flex-direction: row; align-items: center; justify-content: center; height: 100%;">
+    <div class="container" >
         <div class="text-center mb-5 col-sm-5">
             <img src="{{ url_for('static', filename='images/croc_logo.png') }}" alt="Logo" style="width: 80%; max-width: 720px;">
             <h1 class="headline mb-4">💰 입벌린 악어 💰</h1>
@@ -45,7 +89,7 @@ gtag('config', 'G-TC829VBX7Y');
                     <label for="password">비밀번호</label>
                     <input type="password" name="password" id="password" class="form-control" required>
                 </div>
-                <button type="submit" class="btn btn-primary mb-3 ">로그인</button>
+                <button type="submit" class="btn btn-primary mb-3">로그인</button>
             </form>
             <div class="text-left mb-5">
                 <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary">회원가입</a>
