@@ -111,22 +111,27 @@ export function createCharts() {
         assetChart.render();
     }, 250));
 }
-
 export function updateCharts() {
     const assetValues = Array.from(document.querySelectorAll('#assetsContainer input')).map(input => parseFloat(input.value.replace(/,/g, '')) || 0);
-    const assetLabels = Array.from(document.querySelectorAll('#assetsContainer td:first-child')).map(td => td.textContent.trim());
+    const assetNicknames = Array.from(document.querySelectorAll('#assetsContainer td:first-child')).map(td => td.getAttribute('data-nickname') || td.textContent.trim());
+    const assetCategories = Array.from(document.querySelectorAll('#assetsContainer td:first-child')).map(td => td.getAttribute('data-category'));
     const assetNatures = Array.from(document.querySelectorAll('#assetsContainer td:first-child')).map(td => td.getAttribute('data-nature'));
 
     const liabilityValues = Array.from(document.querySelectorAll('#liabilitiesContainer input')).map(input => parseFloat(input.value.replace(/,/g, '')) || 0);
     const liabilityLabels = Array.from(document.querySelectorAll('#liabilitiesContainer td:first-child')).map(td => td.textContent.trim());
+    const liabilityCategories = Array.from(document.querySelectorAll('#liabilitiesContainer td:first-child')).map(td => td.getAttribute('data-category'));
 
-    const totalAssets = assetValues.reduce((a, b) => a + b, 0).toLocaleString();
-    const totalLiabilities = liabilityValues.reduce((a, b) => a + b, 0).toLocaleString();
-    const netWorth = (parseFloat(totalAssets.replace(/,/g, '')) - parseFloat(totalLiabilities.replace(/,/g, ''))).toLocaleString();
+    const totalAssetsValue = assetValues.reduce((a, b) => a + b, 0) + liabilityValues.reduce((a, b) => a + b, 0);
+    const totalLiabilitiesValue = liabilityValues.reduce((a, b) => a + b, 0);
+    const netWorthValue = totalAssetsValue - totalLiabilitiesValue;
 
-    document.getElementById('total_assets').innerText = `• 총 자산: ${totalAssets}`;
-    document.getElementById('total_liabilities').innerText = `• 총 부채: ${totalLiabilities}`;
-    document.getElementById('net_worth').innerText = `💰 순자산: ${netWorth}`;
+    const totalAssets = totalAssetsValue.toLocaleString();
+    const totalLiabilities = totalLiabilitiesValue.toLocaleString();
+    const netWorth = netWorthValue.toLocaleString();
+
+    document.getElementById('total_assets').innerText = `• 총 자산: ${totalAssets} 원`;
+    document.getElementById('total_liabilities').innerText = `• 총 부채: ${totalLiabilities} 원`;
+    document.getElementById('net_worth').innerText = `💰 순자산: ${netWorth} 원`;
 
     let investmentAssetsTotal = 0;
     let cashEquivalentsTotal = 0;
@@ -156,16 +161,18 @@ export function updateCharts() {
     document.getElementById('other_long_term_assets_total').innerText = `• 기타 장기 자산 합: ${otherLongTermAssetsTotal.toLocaleString()}`;
 
     const debtRatio = ((parseFloat(totalLiabilities.replace(/,/g, '')) / parseFloat(totalAssets.replace(/,/g, ''))) * 100).toFixed(2);
+    const investRatio = ((investmentAssetsTotal / parseFloat(totalAssets.replace(/,/g, ''))) * 100).toFixed(2);
     const liquidityRatio = ((cashEquivalentsTotal / parseFloat(totalAssets.replace(/,/g, ''))) * 100).toFixed(2);
 
     document.getElementById('debt_ratio').innerText = `• 부채 비율: ${debtRatio}%`;
+    document.getElementById('invest_ratio').innerText = `• 투자 비율: ${investRatio}%`;
     document.getElementById('liquidity_ratio').innerText = `• 자산 대비 현금 비율: ${liquidityRatio}%`;
     
-    const assetColors = assetLabels.map(label => colorMapping[label] || '#FF4500');
-    const liabilityColors = liabilityLabels.map(label => colorMapping[label] || '#FF4500');
+    const assetColors = assetCategories.map(category => colorMapping[category] || '#FF4500');
+    const liabilityColors = liabilityCategories.map(category => colorMapping[category] || '#FF4500');
 
     assetChart.updateOptions({
-        labels: [...assetLabels, ...liabilityLabels],
+        labels: [...assetNicknames, ...liabilityLabels],
         series: [...assetValues, ...liabilityValues],
         colors: [...assetColors, ...liabilityColors]
     });

@@ -16,3 +16,5 @@ google-cloud-profiler
 gunicorn
 python-dateutil
 pykrx
+google-cloud-storage
+Flask-WTF

@@ -23,15 +23,15 @@ gtag('js', new Date());
 gtag('config', 'G-TC829VBX7Y');
 </script>
 <body>
-    <div class="container">
+    <div class="container" style="padding: 5% 20%; background:#ffffff;">
         <div class="row justify-content-center">
             <div class="col-md-6">
                 <h2 class="mt-5 mb-4">회원가입</h2>
-                <form action="{{ url_for('auth.signup') }}" method="post">
-                    <!-- CSRF 토큰 제거 -->
+                <form id="signupForm" action="{{ url_for('auth.signup') }}" method="post" onsubmit="return validateForm()">
                     <div class="form-group">
                         <label for="email">이메일</label>
-                        <input type="email" name="email" id="email" class="form-control" required>
+                        <input type="email" name="email" id="email" class="form-control" required aria-describedby="emailHelp">
+                        <small id="emailHelp" class="form-text text-muted">이메일은 다른 사람과 공유되지 않습니다.</small>
                     </div>
                     <div class="form-group">
                         <label for="username">사용자 이름</label>
@@ -41,11 +41,27 @@ gtag('config', 'G-TC829VBX7Y');
                         <label for="password">비밀번호</label>
                         <input type="password" name="password" id="password" class="form-control" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">환영합니다 💛 </button>
+                    <div class="form-group">
+                        <label for="confirm_password">비밀번호 확인</label>
+                        <input type="password" name="confirm_password" id="confirm_password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" aria-label="회원가입 버튼">환영합니다 💛</button>
                 </form>
             </div>
         </div>
     </div>
+
+    <script>
+        function validateForm() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+
+            if (password !== confirmPassword) {
+                alert('비밀번호가 일치하지 않습니다.');
+                return false;
+            }
+            return true;
+        }
+    </script>
 </body>
 </html>
-

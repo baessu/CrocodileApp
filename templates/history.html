@@ -4,7 +4,7 @@
     {% include '_head.html' %}
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-TC829VBX7Y"></script>
-        <script>
+    <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
@@ -24,47 +24,46 @@
                             <a href="{{ url_for('logout') }}" class="btn btn-secondary logout-btn">로그아웃</a>
                         </div>
                     </div>
-                
 
                     <!-- Snapshot History Body -->
                     <div class="container-fluid">
                         <div class="historycontent">
                             <div id="historyChart" style="height: 400px;"></div>
-                                <table class="table mt-6">
-                                    <thead>
-                                        <tr>
-                                            <th>날짜</th>
-                                            <th>총 자산(원)</th>
-                                            <th>총 부채(원)</th>
-                                            <th>순자산(원)</th>
-                                            <th>삭제</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="snapshotTableBody">
-                                        {% for snapshot in snapshots %}
-                                        <tr id="snapshot-{{ snapshot.id }}" onclick="toggleDetails('{{ snapshot.id }}')">
-                                            <td>{{ snapshot.date }}</td>
-                                            <td>{{ snapshot.total_assets | format_currency }}</td>
-                                            <td>{{ snapshot.total_liabilities | format_currency }}</td>
-                                            <td>{{ snapshot.net_worth | format_currency }}</td>
-                                            <td>
-                                                <button class="btn btn-danger" onclick="deleteSnapshot('{{ snapshot.id }}')">삭제</button>
-                                            </td>
-                                        </tr>
-                                        <tr id="details-{{ snapshot.id }}" class="details-row" style="display: none;">
-                                            <td colspan="5">
-                                                <div class="asset-details">
-                                                    <h5>자산 내역</h5>
-                                                    <ul class="asset-list"></ul>
-                                                    <h5>부채 내역</h5>
-                                                    <ul class="liability-list"></ul>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <table class="table mt-6">
+                                <thead>
+                                    <tr>
+                                        <th>날짜</th>
+                                        <th>총 자산(원)</th>
+                                        <th>총 부채(원)</th>
+                                        <th>순자산(원)</th>
+                                        <th>삭제</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="snapshotTableBody">
+                                    {% for snapshot in snapshots %}
+                                    <tr id="snapshot-{{ snapshot.id }}" onclick="toggleDetails('{{ snapshot.id }}')">
+                                        <td>{{ snapshot.date }}</td>
+                                        <td>{{ snapshot.total_assets | format_currency }}</td>
+                                        <td>{{ snapshot.total_liabilities | format_currency }}</td>
+                                        <td>{{ snapshot.net_worth | format_currency }}</td>
+                                        <td>
+                                            <button class="btn btn-danger" onclick="deleteSnapshot(event, '{{ snapshot.id }}')">삭제</button>
+                                        </td>
+                                    </tr>
+                                    <tr id="details-{{ snapshot.id }}" class="details-row" style="display: none;">
+                                        <td colspan="5">
+                                            <div class="asset-details">
+                                                <h5>자산 내역</h5>
+                                                <ul class="asset-list"></ul>
+                                                <h5>부채 내역</h5>
+                                                <ul class="liability-list"></ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </main>
             </div>
@@ -148,33 +147,7 @@
                     })
                     .then(data => {
                         const snapshots = data.snapshots;
-                        const snapshotTableBody = document.getElementById('snapshotTableBody');
-        
-                        snapshotTableBody.innerHTML = '';
-                        snapshots.forEach(snapshot => {
-                            snapshotTableBody.innerHTML += `
-                                <tr id="snapshot-${snapshot.id}" onclick="toggleDetails('${snapshot.id}')">
-                                    <td>${snapshot.date}</td>
-                                    <td>${snapshot.total_assets.toLocaleString()}</td>
-                                    <td>${snapshot.total_liabilities.toLocaleString()}</td>
-                                    <td>${snapshot.net_worth.toLocaleString()}</td>
-                                    <td>
-                                        <button class="btn btn-danger" onclick="deleteSnapshot('${snapshot.id}')">삭제</button>
-                                    </td>
-                                </tr>
-                                <tr id="details-${snapshot.id}" class="details-row" style="display: none;">
-                                    <td colspan="5">
-                                        <div class="asset-details">
-                                            <h5>자산 내역</h5>
-                                            <ul class="asset-list"></ul>
-                                            <h5>부채 내역</h5>
-                                            <ul class="liability-list"></ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                        //console.log("Rendering chart with snapshots:", snapshots); // Add logging here
+                        renderSnapshotTable(snapshots);
                         renderChart(snapshots);
                     })
                     .catch(error => {
@@ -183,8 +156,36 @@
                     });
             }
 
-            function deleteSnapshot(snapshotId) {
-                //console.log('Deleting snapshot with ID:', snapshotId); // 디버깅을 위해 추가
+            function renderSnapshotTable(snapshots) {
+                const snapshotTableBody = document.getElementById('snapshotTableBody');
+                snapshotTableBody.innerHTML = '';
+                snapshots.forEach(snapshot => {
+                    snapshotTableBody.innerHTML += `
+                        <tr id="snapshot-${snapshot.id}" onclick="toggleDetails('${snapshot.id}')">
+                            <td>${snapshot.date}</td>
+                            <td>${snapshot.total_assets.toLocaleString()}</td>
+                            <td>${snapshot.total_liabilities.toLocaleString()}</td>
+                            <td>${snapshot.net_worth.toLocaleString()}</td>
+                            <td>
+                                <button class="btn btn-danger" onclick="deleteSnapshot(event, '${snapshot.id}')">삭제</button>
+                            </td>
+                        </tr>
+                        <tr id="details-${snapshot.id}" class="details-row" style="display: none;">
+                            <td colspan="5">
+                                <div class="asset-details">
+                                    <h5>자산 내역</h5>
+                                    <ul class="asset-list"></ul>
+                                    <h5>부채 내역</h5>
+                                    <ul class="liability-list"></ul>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            function deleteSnapshot(event, snapshotId) {
+                event.stopPropagation(); // 이벤트 버블링 방지
 
                 if (confirm('정말 이 스냅샷을 삭제하시겠습니까?')) {
                     fetch(`/delete_snapshot/${snapshotId}`, {
@@ -208,7 +209,6 @@
                         alert('스냅샷 삭제 중 오류 발생.');
                     });
                 }
-
             }
 
             function toggleDetails(snapshotId) {
@@ -217,8 +217,6 @@
                     fetch(`/snapshot_details/${snapshotId}`)
                         .then(response => response.json())
                         .then(data => {
-                            //console.log('Fetched data:', data); // 디버깅을 위해 추가
-
                             const assetList = detailsRow.querySelector('.asset-list');
                             const liabilityList = detailsRow.querySelector('.liability-list');
 
@@ -228,7 +226,7 @@
                             if (Array.isArray(data.assets)) {
                                 data.assets.forEach(asset => {
                                     const li = document.createElement('li');
-                                    li.textContent = `${asset.type}: ${asset.name} - ${asset.value.toLocaleString()} 원`;
+                                    li.textContent = `${asset.name} : ${asset.value.toLocaleString()} 원`;
                                     assetList.appendChild(li);
                                 });
                             } else {
@@ -238,7 +236,7 @@
                             if (Array.isArray(data.liabilities)) {
                                 data.liabilities.forEach(liability => {
                                     const li = document.createElement('li');
-                                    li.textContent = `${liability.type}: ${liability.name} - ${liability.value.toLocaleString()} 원`;
+                                    li.textContent = `${liability.name} : ${liability.value.toLocaleString()} 원`;
                                     liabilityList.appendChild(li);
                                 });
                             } else {

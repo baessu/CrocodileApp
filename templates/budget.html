@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    {% include '_head.html' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/budget.css') }}">
+</head>
+<style>
+    .list-group-item {
+        padding: .35rem 1.0rem;
+    }
+    .form-group{
+        margin-bottom: .35rem;
+    }
+    .list-group-item.bold-text {
+        background-color: #f8f8f8; 
+    }
+    .chart-container {
+        width: 100%%;
+        overflow-x: auto; /* 수평 스크롤 가능 */
+    }
+    
+    .chart {
+        height: 350px;
+    }
+</style>
+<body>
+    <div id="app">
+        <div class="row">
+            {% include '_sidebar.html' %}
+            <main role="main" class="main col-md-8 px-4">
+                <div class="login-bar d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-4 mb-4">
+                    <h1>월별 가계부</h1>
+                    <div>
+                        <a href="{{ url_for('logout') }}" class="btn btn-secondary logout-btn">로그아웃</a>
+                    </div>
+                </div>
+                <div class="container">
+                    <div style="display:flex;flex-wrap: wrap; gap: 16px;">
+                    <div class="equal-height-container">
+                        <div class="col-md-4 column-container">
+                            <h6>년도 및 월 선택</h6>
+                                <select id="yearSelect" class="form-control mb-3" style="border-color: rgba(0,0,0,.125)">
+                                    <option value="2024">2024</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2026">2026</option>
+                                    <!-- 필요에 따라 더 추가 -->
+                                </select>
+                            <div class="grid-container">
+                                <div class="grid-item month-cell" data-month="1">1월</div>
+                                <div class="grid-item month-cell" data-month="2">2월</div>
+                                <div class="grid-item month-cell" data-month="3">3월</div>
+                                <div class="grid-item month-cell" data-month="4">4월</div>
+                                <div class="grid-item month-cell" data-month="5">5월</div>
+                                <div class="grid-item month-cell" data-month="6">6월</div>
+                                <div class="grid-item month-cell" data-month="7">7월</div>
+                                <div class="grid-item month-cell" data-month="8">8월</div>
+                                <div class="grid-item month-cell" data-month="9">9월</div>
+                                <div class="grid-item month-cell" data-month="10">10월</div>
+                                <div class="grid-item month-cell" data-month="11">11월</div>
+                                <div class="grid-item month-cell" data-month="12">12월</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 column-container">
+                            <h6>카테고리 선택</h6>
+                            <ul class="list-group" id="categoryList">
+                                <li class="list-group-item" data-category="Income">수입</li>
+                                <li class="list-group-item active" data-category="Expense">지출</li>
+                                <li class="list-group-item" data-category="Savings">저축/투자</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4 column-container">
+                            <h6>세부항목 선택</h6>
+                            <div id="subCategoryContainer" style="display: none;" class="list-group-container">
+                                <ul class="list-group" id="subCategoryList"></ul>
+                                <input type="hidden" id="customSubCategory">
+                            </div>
+                        </div>
+                    
+                    <form class="col-md-4 column-container" id="budgetForm" class="mt-4">
+
+                        <h6>금액</h6>
+                        <div class="form-group" id="customCategoryContainer" style="display: none;">
+                            <label for="customCategory">항목 카테고리</label>
+                            <input type="text" class="form-control" id="customCategory" placeholder="카테고리를 입력하세요">
+                        </div>
+                        <div class="form-group">
+                            <label for="amount">금액</label>
+                            <input type="text" class="form-control" id="amount" style="border-color: rgba(0,0,0,.125);" placeholder="금액을 입력하세요" oninput="formatCurrency(this)" onblur="parseCurrency(this)">                        </div>
+                        <div class="form-group">
+                            <label for="description">설명</label>
+                            <input type="text" class="form-control" id="description" style="border-color: rgba(0,0,0,.125);" placeholder="설명을 입력하세요">
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="addBudgetEntry()">추가</button>
+                    </form>
+                </div>
+                <div class="budgethistory">
+                     <!--<h4 class="mt-2 mb-4">기록된 내역</h4>-->
+                    <select id="viewMonthSelect" class="form-control mb-3" onchange="filterBudgetEntriesByMonth()" style="width:20%; min-width:140px; border-color: rgba(0,0,0,.125);">
+                        <option value="">전체 보기</option>
+                        <!-- 옵션이 동적으로 추가될 것입니다 -->
+                    </select>
+                    <div class="table-container" >
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>월</th>
+                                    <th>카테고리</th>
+                                    <th>세부항목</th>
+                                    <th>금액</th>
+                                    <th>설명</th>
+                                    <th>삭제</th>
+                                </tr>
+                            </thead>
+                            <tbody id="budgetTableBody">
+                                <!-- 기록된 내역이 여기에 추가됩니다 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="chart-container" class="chart-container">
+                    <div id="chart" class="chart"></div>
+                </div>
+            </div>
+            </div>
+        </main>
+    </div>
+</div>
+<script>
+    const initialBudgetEntries = {{ budget_entries | tojson }};
+</script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/budget.js') }}"></script>
+</body>
+</html>

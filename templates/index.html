@@ -12,29 +12,74 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 </head>
-    <!-- Google tag (gtag.js) -->
+<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TC829VBX7Y"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
 
-    gtag('config', 'G-TC829VBX7Y');
+gtag('config', 'G-TC829VBX7Y');
 </script>
 <style>
     .container{
         background-color: #ffffff;
+        display: flex; 
+        flex-direction: row; 
+        align-items: center; 
+        justify-content: center; 
+        height: 100%;
+    }
+    /* Responsive */
+    @media (max-width: 576px) {
+        .container{
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            width: 100%;
+        }
+        .col-sm-5 {
+            max-width: 100%;
+            max-height: 250px;
+        }
+        .col-sm-4 {
+            max-width: 80%;
+        }
+        .mb-5{
+            margin-bottom: 0px;
+        }
+
+    
+    }
+    
+    @media (min-width: 577px) and (max-width: 768px) {
+        .container{
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            width: 100%;
+        }
+        .col-sm-5 {
+        max-width: 100%;
+        max-height: 350px;
+        }
+        .col-sm-4 {
+            max-width: 80%;
+            }
+        .mb-5{
+            margin-bottom: 0px;
+        }
     }
 </style>
 <body>
-    <div class="container mt-5" style="display: flex; flex-direction: column; align-items: center;">
-        <div class="text-center mb-5">
-            <img src="{{ url_for('static', filename='images/croc_logo.png') }}" alt="Logo" style="width: 90%; max-width: 720px;">
-            <h1 class="headline">💰 입벌린 악어 💰</h1>
+    <div class="container" >
+        <div class="text-center mb-5 col-sm-5">
+            <img src="{{ url_for('static', filename='images/croc_logo.png') }}" alt="Logo" style="width: 80%; max-width: 720px;">
+            <h1 class="headline mb-4">💰 입벌린 악어 💰</h1>
+            <h2 class="mb-4">크왕~! </h2>
         </div>
         
-        <div class="col-sm-4 text-center mb-3 ">
-            <h2 class="mb-4">크왕~! </h2>
+        <div class="col-sm-4 text-left ">
             <form action="{{ url_for('auth.login') }}" method="post">
                 <div class="form-group">
                     <label for="email">이메일</label>
@@ -44,12 +89,13 @@
                     <label for="password">비밀번호</label>
                     <input type="password" name="password" id="password" class="form-control" required>
                 </div>
-                <button type="submit" class="btn btn-primary">로그인</button>
+                <button type="submit" class="btn btn-primary mb-3">로그인</button>
             </form>
+            <div class="text-left mb-5">
+                <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary">회원가입</a>
+            </div>
         </div>
-        <div class="text-center mb-5">
-            <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary">회원가입</a>
-        </div>
+        
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function() {

@@ -15,7 +15,8 @@ from models import User
 import googlecloudprofiler
 from dateutil import parser
 from pykrx import stock
-
+from economic_indicators import get_economic_indicators
+import json
 
 KST = timezone(timedelta(hours=9))  # Korea Standard Time (UTC+9)
 
@@ -25,44 +26,31 @@ def initialize_profiler():
     """
     try:
         googlecloudprofiler.start(
-            service="hello-profiler",  # 프로파일러에서 사용할 서비스 이름
-            service_version="1.0.1",  # 애플리케이션 버전
-            verbose=3,  # 로깅 수준 (0-오류, 1-경고, 2-정보, 3-디버그)
-            # GCP에서 실행되지 않는 경우 프로젝트 ID 지정
-            # project_id='my-project-id',
+            service="hello-profiler",
+            service_version="1.0.1",
+            verbose=3,
         )
     except (ValueError, NotImplementedError) as exc:
-        print(f"프로파일러 초기화 오류: {exc}")  # 초기화 오류 처리
+        print(f"프로파일러 초기화 오류: {exc}")
 
 def main():
     """
     애플리케이션의 메인 진입점입니다.
     """
     initialize_profiler()
-    # 여기에서 애플리케이션의 나머지 초기화를 수행합니다.
-    # 예: 데이터베이스 연결, 로깅 설정, 기타 서비스 초기화 등
-
-    # 애플리케이션의 주요 로직 실행
     print("애플리케이션이 시작되었습니다.")
-
 
 load_dotenv()
 app = Flask(__name__)
-#db = SQLAlchemy()
 
-# 안전한 SECRET_KEY 생성 및 설정
 app.config['SECRET_KEY'] = secrets.token_hex(24)
-app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=1)  # 세션 유지 시간을 7일로 설정
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=1)
 # app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
-supabase = create_client(supabase_url,supabase_key)
-
-# db.init_app(app)
-#migrate = Migrate(app, supabase)
+supabase = create_client(supabase_url, supabase_key)
 
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
@@ -83,8 +71,6 @@ def load_user(user_id):
     return None
 
 app.register_blueprint(auth_blueprint)
-
-
 
 @app.template_filter('format_currency')
 def format_currency(value):
@@ -111,37 +97,49 @@ def index():
 @login_required
 def dashboard():
     user_id = current_user.id
-    
     try:
-        # Fetch assets, liabilities, and asset types from Supabase
-        assets_response = supabase.table('user_asset').select('*').eq('user_id', user_id).execute()
-        liabilities_response = supabase.table('user_liability').select('*').eq('user_id', user_id).execute()
+        # 자산 데이터를 asset_type_id 순으로 정렬하여 가져오기
+        assets_response = (
+            supabase.table('user_asset')
+            .select('*')
+            .eq('user_id', user_id)
+            .order('asset_type_id', desc=False)  # asc=True 사용
+            .execute()
+        )
+        # 부채 데이터를 liability_type_id 순으로 정렬하여 가져오기
+        liabilities_response = (
+            supabase.table('user_liability')
+            .select('*')
+            .eq('user_id', user_id)
+            .order('liability_type_id', desc=False)  # asc=True 사용
+            .execute()
+        )
         asset_types_response = supabase.table('asset_type').select('*').execute()
 
-        # Extract data from responses
         assets = assets_response.data if assets_response.data else []
         liabilities = liabilities_response.data if liabilities_response.data else []
         asset_types = asset_types_response.data if asset_types_response.data else []
 
-        # Create a dictionary of asset types for quick lookup
         asset_type_dict = {asset_type['id']: asset_type for asset_type in asset_types}
 
-        # Add asset type details to each asset
         for asset in assets:
             asset_type_id = asset['asset_type_id']
             asset['asset_type'] = asset_type_dict.get(asset_type_id, {})
 
-        # Add liability type details to each liability
         for liability in liabilities:
             liability_type_id = liability['liability_type_id']
             liability['liability_type'] = asset_type_dict.get(liability_type_id, {})
+
+        # asset_type_id로 오름차순, value로 내림차순 정렬
+        assets.sort(key=lambda x: (x['asset_type_id'], -x['value']))
+        # liability_type_id로 오름차순, value로 내림차순 정렬
+        liabilities.sort(key=lambda x: (x['liability_type_id'], -x['value']))
 
     except Exception as e:
         app.logger.error(f"Error fetching data: {e}", exc_info=True)
         assets, liabilities, asset_types = [], [], []
 
     return render_template('dashboard.html', assets=assets, liabilities=liabilities, asset_types=asset_types)
-
 
 @app.route('/logout')
 @login_required
@@ -154,13 +152,8 @@ def logout():
 def asset_data():
     try:
         user_id = current_user.id
-        #app.logger.info(f"Fetching assets for user_id: {user_id}")
-        
         assets_response = supabase.table('user_asset').select('*').eq('user_id', user_id).execute()
-        #app.logger.info(f"Assets Response: {assets_response.data}")
-        
         liabilities_response = supabase.table('user_liability').select('*').eq('user_id', user_id).execute()
-        #app.logger.info(f"Liabilities Response: {liabilities_response.data}")
 
         if not assets_response.data or not liabilities_response.data:
             app.logger.error(f"Error fetching asset data: {assets_response} {liabilities_response}")
@@ -169,9 +162,6 @@ def asset_data():
         asset_data = [{'name': asset['nickname'], 'nature': asset['asset_type_id'], 'value': asset['value']} for asset in assets_response.data]
         liability_data = [{'name': liability['nickname'], 'nature': 'liability', 'value': liability['value']} for liability in liabilities_response.data]
 
-        #app.logger.info(f"Asset Data: {asset_data}")
-        #app.logger.info(f"Liability Data: {liability_data}")
-
         return jsonify({'assets': asset_data, 'liabilities': liability_data})
     except Exception as e:
         app.logger.error(f"Error fetching asset data: {e}", exc_info=True)
@@ -179,8 +169,6 @@ def asset_data():
 
 def parse_currency(value):
     return float(value.replace(',', ''))
-
-
 
 @app.route('/add_asset', methods=['POST'])
 @login_required
@@ -244,10 +232,14 @@ def delete_asset(asset_id):
     try:
         user_id = current_user.id
         response = supabase.table('user_asset').delete().eq('id', asset_id).eq('user_id', user_id).execute()
-        return jsonify({'success': True}), 200
+        if response.data:
+            return jsonify({'success': True}), 200
+        else:
+            app.logger.error(f"Error deleting asset: {response}")
+            return jsonify({'success': False, 'message': 'Error deleting asset'}), 404
     except Exception as e:
         app.logger.error(f"Error deleting asset: {e}")
-        return jsonify({'success': False}), 404
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/delete_liability/<int:liability_id>', methods=['DELETE'])
 @login_required
@@ -255,11 +247,14 @@ def delete_liability(liability_id):
     try:
         user_id = current_user.id
         response = supabase.table('user_liability').delete().eq('id', liability_id).eq('user_id', user_id).execute()
-        return jsonify({'success': True}), 200
+        if response.data:
+            return jsonify({'success': True}), 200
+        else:
+            app.logger.error(f"Error deleting liability: {response}")
+            return jsonify({'success': False, 'message': 'Error deleting liability'}), 404
     except Exception as e:
         app.logger.error(f"Error deleting liability: {e}")
-        return jsonify({'success': False}), 404
-
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/update_asset/<int:asset_id>', methods=['POST'])
 @login_required
@@ -270,7 +265,11 @@ def update_asset(asset_id):
         if 'value' in data:
             update_data = {'value': float(data['value'])}
             response = supabase.table('user_asset').update(update_data).eq('id', asset_id).eq('user_id', user_id).execute()
-            return jsonify({'success': True}), 200
+            if response.data:
+                return jsonify({'success': True}), 200
+            else:
+                app.logger.error(f"Error updating asset: {response}")
+                return jsonify({'success': False, 'message': 'Error updating asset'}), 400
         else:
             return jsonify({'success': False, 'message': 'Value not provided'}), 400
     except Exception as e:
@@ -286,14 +285,16 @@ def update_liability(liability_id):
         if 'value' in data:
             update_data = {'value': float(data['value'])}
             response = supabase.table('user_liability').update(update_data).eq('id', liability_id).eq('user_id', user_id).execute()
-            return jsonify({'success': True}), 200
+            if response.data:
+                return jsonify({'success': True}), 200
+            else:
+                app.logger.error(f"Error updating liability: {response}")
+                return jsonify({'success': False, 'message': 'Error updating liability'}), 400
         else:
             return jsonify({'success': False, 'message': 'Value not provided'}), 400
     except Exception as e:
         app.logger.error(f"Error updating liability: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
-
-import json
 
 @app.route('/api/snapshots', methods=['GET'])
 @login_required
@@ -301,7 +302,7 @@ def get_snapshots():
     try:
         user_id = current_user.id
         response = supabase.table('snapshot').select('*').eq('user_id', user_id).execute()
-        if response.data is None:
+        if not response.data:
             raise Exception("Failed to fetch snapshots")
         
         snapshots = response.data
@@ -309,7 +310,6 @@ def get_snapshots():
         
         for snapshot in snapshots:
             try:
-                # Use dateutil.parser to handle the date format
                 utc_date = parser.isoparse(snapshot['date'])
                 kst_date = utc_date.astimezone(KST).strftime('%Y-%m-%d')
                 snapshot_data.append({
@@ -328,9 +328,6 @@ def get_snapshots():
         app.logger.error(f"Error fetching snapshots: {e}")
         return jsonify({'error': 'Error fetching snapshots'}), 500
 
-
-    
-    
 @app.route('/snapshot', methods=['POST'])
 @login_required
 def snapshot():
@@ -346,8 +343,9 @@ def snapshot():
         assets = assets_response.data
         liabilities = liabilities_response.data
 
-        total_assets = sum(asset['value'] for asset in assets)
+        only_assets = sum(asset['value'] for asset in assets)
         total_liabilities = sum(liability['value'] for liability in liabilities)
+        total_assets = only_assets + total_liabilities
         net_worth = total_assets - total_liabilities
 
         asset_details = [{'name': asset['nickname'], 'type': asset['asset_type_id'], 'value': asset['value']} for asset in assets]
@@ -359,8 +357,8 @@ def snapshot():
             'total_assets': total_assets,
             'total_liabilities': total_liabilities,
             'net_worth': net_worth,
-            'asset_details': json.dumps(asset_details),  # Serialize details to JSON
-            'liability_details': json.dumps(liability_details)  # Serialize details to JSON
+            'asset_details': json.dumps(asset_details),
+            'liability_details': json.dumps(liability_details)
         }
         response = supabase.table('snapshot').insert(new_snapshot).execute()
         if not response.data:
@@ -376,7 +374,6 @@ def snapshot():
 def delete_snapshot(snapshot_id):
     try:
         user_id = current_user.id
-        # Check if the snapshot exists
         response = supabase.table('snapshot').select('*').eq('id', snapshot_id).eq('user_id', user_id).execute()
         snapshot = response.data
         
@@ -384,12 +381,15 @@ def delete_snapshot(snapshot_id):
             app.logger.error(f"Snapshot with ID {snapshot_id} not found for user {user_id}.")
             return jsonify({'success': False, 'error': 'Snapshot not found or unauthorized'}), 404
         
-        # Proceed to delete the snapshot
         delete_response = supabase.table('snapshot').delete().eq('id', snapshot_id).eq('user_id', user_id).execute()
-        return jsonify({'success': True}), 200
+        if delete_response.data:
+            return jsonify({'success': True}), 200
+        else:
+            app.logger.error(f"Error deleting snapshot: {delete_response}")
+            return jsonify({'success': False, 'message': 'Error deleting snapshot'}), 404
     except Exception as e:
         app.logger.error(f"Error deleting snapshot: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/snapshot_details/<int:snapshot_id>', methods=['GET'])
 @login_required
@@ -403,7 +403,7 @@ def snapshot_details(snapshot_id):
             app.logger.error(f"Snapshot with ID {snapshot_id} not found for user {user_id}.")
             return jsonify({'error': 'Snapshot not found or unauthorized'}), 404
 
-        snapshot_data = snapshot[0]  # Get the first element from the response data
+        snapshot_data = snapshot[0]
 
         asset_details = json.loads(snapshot_data['asset_details'])
         liability_details = json.loads(snapshot_data['liability_details'])
@@ -430,7 +430,6 @@ def history():
         
         for snapshot in snapshots:
             try:
-                # Use dateutil.parser to handle the date format
                 utc_date = parser.isoparse(snapshot['date'])
                 kst_date = utc_date.astimezone(KST).strftime('%Y-%m-%d')
                 snapshot_data.append({
@@ -459,171 +458,79 @@ def retirement():
 def economic_indicators():
     return render_template('economic_indicators.html')
 
-class NaverWebIo:
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    @staticmethod
-    def fetch(ticker, count, timeframe='day'):
-        url = "http://fchart.stock.naver.com/sise.nhn"
-        params = {
-            'symbol': ticker,
-            'timeframe': timeframe,
-            'count': count,
-            'requestType': '0'
-        }
-        response = requests.get(url, headers=NaverWebIo.headers, params=params)
-        response.raise_for_status()
-        return response.text
-
-def extract_prices(ticker, count=2000):
-    xml_data = NaverWebIo.fetch(ticker, count, "day")
-    root = ET.fromstring(xml_data)
-    items = root.find('chartdata').findall('item')
-    data = []
-    for item in items:
-        date, now, _, _, close, _ = item.get('data').split('|')
-        data.append([date, now, close])
-    df = pd.DataFrame(data, columns=['Date', 'Now', 'Close'])
-    df['Date'] = pd.to_datetime(df['Date'])
-    df['Close'] = df['Close'].astype(float)
-    df.set_index('Date', inplace=True)
-    return df
-
-def calculate_disparity(prices, window):
-    moving_average = prices.rolling(window=window).mean()
-    disparity = (prices / moving_average) * 100
-    return disparity.fillna(0).tolist()
-
-
-def fetch_kospi_pbr_data(start_date, end_date):
-    url = "https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
-    payload = {
-        'bld': 'dbms/MDC/STAT/standard/MDCSTAT00702',
-        'locale': 'ko_KR',
-        'searchType': 'P',
-        'idxIndMidclssCd': '02',
-        'trdDd': end_date,
-        'tboxindTpCd_finder_equidx0_0': '코스피',
-        'indTpCd': '1',
-        'indTpCd2': '001',
-        'codeNmindTpCd_finder_equidx0_0': '코스피',
-        'param1indTpCd_finder_equidx0_0': '',
-        'strtDd': start_date,
-        'endDd': end_date,
-        'csvxls_isNo': 'false'
-    }
-    
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-
-    response = requests.post(url, data=payload, headers=headers)
-    response.raise_for_status()  # Ensure the request was successful
-    return response.json()
-
-def create_dataframe_from_response(response_data):
-    data = [
-        (item['TRD_DD'], float(item['WT_STKPRC_NETASST_RTO'].replace(',', '')))
-        for item in response_data['output']
-    ]
-    df = pd.DataFrame(data, columns=['Date', 'PBR'])
-    df['Date'] = pd.to_datetime(df['Date'])
-    df.sort_values(by='Date', inplace=True)  # 날짜 오름차순으로 정렬
-
-    return df
-
 @app.route('/api/economic_indicators', methods=['GET'])
 @login_required
 def api_economic_indicators():
     fred_api_key = os.getenv('FRED_API_KEY')
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=365*3)  # 3 years of data
-    recent_start_date = end_date - timedelta(days=365)  # 1 year of data
-    start_date_str = start_date.strftime('%Y-%m-%d')
-    recent_start_date_str = recent_start_date.strftime('%Y-%m-%d')
-    end_date_str = end_date.strftime('%Y-%m-%d')
-
-    fred_indicators = {
-        'nasdaq': 'NASDAQCOM',
-        'sp500': 'SP500'
-    }
-
-    data = {'dates': []}
-    
-    # Fetch data from FRED
-    for key, fred_id in fred_indicators.items():
-        try:
-            response = requests.get(f'https://api.stlouisfed.org/fred/series/observations', params={
-                'api_key': fred_api_key,
-                'file_type': 'json',
-                'series_id': fred_id,
-                'observation_start': start_date_str,
-                'observation_end': end_date_str
-            })
-            response.raise_for_status()
-            observations = response.json().get('observations', [])
-            dates = [obs['date'] for obs in observations]
-            values = [float(obs['value']) for obs in observations if obs['value'] != '.']
-            if not data['dates']:
-                data['dates'] = dates
-            data[key] = values
-        except requests.exceptions.RequestException as e:
-            app.logger.error(f"Error fetching {key} data from FRED: {e}")
-
-    # Fetch data from Naver API for KOSPI and KOSDAQ
-    try:
-        kospi_data = extract_prices('KOSPI', 3000)
-        kosdaq_data = extract_prices('KOSDAQ', 3000)
-        data['dates'] = kospi_data.index.strftime('%Y-%m-%d').tolist()
-        data['kospi'] = kospi_data['Close'].tolist()
-        data['kosdaq'] = kosdaq_data['Close'].tolist()
-
-        # Calculate disparity indices
-        kospi_close = kospi_data['Close']
-        data['kospi_disparity_20'] = calculate_disparity(kospi_close, 20)
-        data['kospi_disparity_60'] = calculate_disparity(kospi_close, 60)
-        data['kospi_disparity_200'] = calculate_disparity(kospi_close, 200)
-    except Exception as e:
-        app.logger.error(f"Error fetching or calculating data from Naver: {e}")
-
-    # Fetch KOSPI PBR data for the last 30 days
-    try:
-        today = datetime.today()
-        start_date_30 = (today - timedelta(days=30)).strftime("%Y%m%d")
-        end_date = today.strftime("%Y%m%d")
-        
-        response_data = fetch_kospi_pbr_data(start_date_30, end_date)
-        # app.logger.debug(f"Raw KOSPI PBR data: {response_data}")
-
-        kospi_pbr_df = create_dataframe_from_response(response_data)
-        # app.logger.debug(f"KOSPI PBR DataFrame: {kospi_pbr_df}")
-
-        data['kospi_pbr_dates'] = kospi_pbr_df['Date'].dt.strftime('%Y-%m-%d').tolist()
-        data['kospi_pbr_values'] = kospi_pbr_df['PBR'].tolist()
-        
-        # app.logger.info(f"KOSPI PBR Dates: {data['kospi_pbr_dates']}")
-        # app.logger.info(f"KOSPI PBR Values: {data['kospi_pbr_values']}")
-        
-    except Exception as e:
-        app.logger.error(f"Error fetching KOSPI PBR data: {e}")
-        
-        
-        
-    # Filter data to only include the most recent year
-    if len(data['dates']) > 365:
-        for key in data.keys():
-            data[key] = data[key][-365:]
-
+    start_date = end_date - timedelta(days=365*3)
+    data = get_economic_indicators(fred_api_key, start_date, end_date)
     return jsonify(data)
 
+@app.route('/budget')
+@login_required
+def budget():
+    try:
+        user_id = current_user.id
+        response = supabase.table('user_budget').select('*').eq('user_id', user_id).execute()
+        if response.data is None:
+            raise Exception("Failed to fetch budget entries")
 
+        budget_entries = response.data
+        budget_data = []
+        for entry in budget_entries:
+            budget_data.append({
+                'id': entry['id'],
+                'year': entry['year'],
+                'month': entry['month'],
+                'category': entry['category'],
+                'sub_category': entry['sub_category'],
+                'amount': entry['amount'],
+                'description': entry['description']
+            })
+        return render_template('budget.html', budget_entries=budget_data)
+    except Exception as e:
+        app.logger.error(f"Error fetching budget: {e}")
+        return jsonify({'error': 'Error fetching budget'}), 500
 
+@app.route('/add_budget_entry', methods=['POST'])
+@login_required
+def add_budget_entry():
+    try:
+        user_id = current_user.id
+        data = request.json
+        new_entry = {
+            "user_id": user_id,
+            "year": data['year'],
+            "month": data['month'],
+            "category": data['category'],
+            "sub_category": data['sub_category'],
+            "amount": data['amount'],
+            "description": data['description']
+        }
 
+        response = supabase.table('user_budget').insert(new_entry).execute()
+        if not response.data:
+            raise Exception("Failed to add budget entry")
 
+        return jsonify(success=True, id=response.data[0]['id'])
+    except Exception as e:
+        app.logger.error(f"Error adding budget entry: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/delete_budget_entry/<int:entry_id>', methods=['DELETE'])
+@login_required
+def delete_budget_entry(entry_id):
+    try:
+        user_id = current_user.id
+        response = supabase.table('user_budget').delete().eq('id', entry_id).eq('user_id', user_id).execute()
+        if response.data is None:
+            raise Exception("Failed to delete budget entry")
+
+        return jsonify(success=True)
+    except Exception as e:
+        app.logger.error(f"Error deleting budget entry: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
-    #app.run(port=8080)
-    
-    
